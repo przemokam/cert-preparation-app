@@ -39,12 +39,34 @@ Open `http://localhost:8000`.
 
 For local use, the app redirects through `/dev-login`, creates a development user, and opens the simulator without requiring Microsoft Entra setup.
 
+## Updating to newer published changes
+
+When a newer version is published in this GitHub repo:
+
+```bash
+cd cert-preparation-app
+git pull origin main
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Then restart the server:
+
+```bash
+uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Notes:
+
+- `git pull origin main` updates the tracked app files to the newest published version.
+- If `requirements.txt` changed, re-running `pip install -r requirements.txt` updates your local environment.
+- Your local `az500_dev.db` may contain your own study progress. If you want a fully fresh database after an update, restore the version from git with `git checkout -- az500_dev.db` before restarting the app.
+
 ## Important note
 
 This package is meant for **running** the prepared app locally.
 
 - The ready-to-use database is already included.
-- You do **not** need `import_from_markdown.py`.
 - Internal authoring/import/verification files were intentionally removed from this package.
 
 ## Included contents
@@ -87,4 +109,4 @@ cert-preparation-app/
 
 ### Database was modified during local study
 
-The bundled `az500_dev.db` is the working local database. If you want to reset your local progress, replace it with a fresh copy from the original package.
+The bundled `az500_dev.db` is the working local database. If you want to reset your local progress, restore the clean tracked copy with `git checkout -- az500_dev.db`.

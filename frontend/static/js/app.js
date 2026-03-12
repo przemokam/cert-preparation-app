@@ -5,7 +5,7 @@
 
 // ── Theme ──────────────────────────────────────
 function getTheme() {
-    return localStorage.getItem('theme') || 'dark';
+    return localStorage.getItem('theme') || 'light';
 }
 
 function setTheme(theme) {
