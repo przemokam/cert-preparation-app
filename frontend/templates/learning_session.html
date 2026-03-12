@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% set active_page = "learning" %}
+
+{% block title %}Learning — AZ-500{% endblock %}
+
+{% block sidebar_extra %}
+<div class="sidebar-navigator">
+    <div class="nav-compact-controls">
+        <button class="btn btn-ghost btn-sm" id="nav-prev-page" onclick="navPrevPage()">&laquo;</button>
+        <span class="nav-page-label" id="nav-page-label">1–50</span>
+        <button class="btn btn-ghost btn-sm" id="nav-next-page" onclick="navNextPage()">&raquo;</button>
+    </div>
+    <div class="question-nav" id="question-nav"></div>
+    <div class="nav-jump-controls">
+        <label for="nav-jump" style="font-size: 11px; color: var(--c-text-muted);" data-i18n="learning.go_to_q">Go to Q:</label>
+        <input type="number" id="nav-jump" class="nav-jump-input" min="1" placeholder="#"
+               onchange="jumpToQuestion(this.value)">
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Top bar -->
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h1 class="page-title" id="session-title" data-i18n="learning.title">AZ-500 Learning</h1>
+        <p class="page-subtitle" id="question-counter" data-i18n="learning.loading">Loading...</p>
+    </div>
+    <span class="badge badge-domain" id="question-domain" style="display: none;"></span>
+</div>
+
+<!-- How it works — collapsible guide -->
+<details class="learning-guide" id="learning-guide">
+    <summary class="learning-guide-toggle" data-i18n="learning_guide.toggle">How Learning Mode Works</summary>
+    <div class="learning-guide-body">
+        <div class="learning-guide-grid">
+            <div class="learning-guide-card">
+                <div class="learning-guide-icon">1</div>
+                <div>
+                    <strong data-i18n="learning_guide.step1_title">Answer &amp; get instant feedback</strong>
+                    <p data-i18n="learning_guide.step1_desc">After you submit, you'll see if you were right or wrong, plus a full explanation with exam traps and key concepts.</p>
+                </div>
+            </div>
+            <div class="learning-guide-card">
+                <div class="learning-guide-icon">2</div>
+                <div>
+                    <strong data-i18n="learning_guide.step2_title">Rate your confidence</strong>
+                    <p data-i18n="learning_guide.step2_desc">Three buttons appear after each answer:</p>
+                    <ul>
+                        <li data-i18n="learning_guide.step2_guessed"><strong>Guessed</strong> &mdash; you weren't sure. The question comes back <em>sooner</em> for review.</li>
+                        <li data-i18n="learning_guide.step2_knew"><strong>Knew it</strong> &mdash; you were confident. Normal review schedule.</li>
+                        <li data-i18n="learning_guide.step2_easy"><strong>Too easy</strong> &mdash; no challenge at all. The question is pushed <em>further out</em>.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="learning-guide-card">
+                <div class="learning-guide-icon">3</div>
+                <div>
+                    <strong data-i18n="learning_guide.step3_title">Spaced repetition does the rest</strong>
+                    <p data-i18n="learning_guide.step3_desc">Every question lives in a box (1&ndash;5). Correct answers promote it; wrong answers reset it. Your confidence rating fine-tunes the timing:</p>
+                    <table class="learning-guide-table">
+                        <thead><tr>
+                            <th data-i18n="learning_guide.step3_box">Box</th>
+                            <th data-i18n="learning_guide.step3_status">Status</th>
+                            <th data-i18n="learning_guide.step3_review">Next review</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr><td>1</td><td data-i18n="learning_guide.step3_b1_status">New / Wrong</td><td data-i18n="learning_guide.step3_b1_review">Same day</td></tr>
+                            <tr><td>2</td><td data-i18n="learning_guide.step3_b2_status">Shaky</td><td data-i18n="learning_guide.step3_b2_review">1 day</td></tr>
+                            <tr><td>3</td><td data-i18n="learning_guide.step3_b3_status">Learning</td><td data-i18n="learning_guide.step3_b3_review">3 days</td></tr>
+                            <tr><td>4</td><td data-i18n="learning_guide.step3_b4_status">Known</td><td data-i18n="learning_guide.step3_b4_review">7 days</td></tr>
+                            <tr><td>5</td><td data-i18n="learning_guide.step3_b5_status">Mastered</td><td data-i18n="learning_guide.step3_b5_review">21 days</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="learning-guide-card">
+                <div class="learning-guide-icon">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/></svg>
+                </div>
+                <div>
+                    <strong data-i18n="learning_guide.step4_title">Flag for review</strong>
+                    <p data-i18n="learning_guide.step4_desc">Click the Flag button at the bottom to bookmark any question. Flagged questions appear in your Review Pool for targeted practice later.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</details>
+
+<!-- Question container (centered, max-width 820px) -->
+<div class="question-container">
+    <!-- Case study banner (shown when question has a case study) -->
+    <div id="case-study-banner" class="case-study-banner" style="display: none;">
+        <button class="btn btn-outline btn-sm" onclick="toggleCaseStudy()">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+            </svg>
+            <span id="case-study-company">View Case Study</span>
+        </button>
+    </div>
+
+    <!-- Question card -->
+    <div class="card question-card" id="question-card">
+        <div class="question-text" id="question-text"></div>
+
+        <!-- Interactive area (options, dropdowns, yes/no, drag-drop) -->
+        <div id="question-interactive"></div>
+
+        <!-- Submit button -->
+        <div style="margin-top: 20px;" id="submit-area">
+            <button class="btn btn-primary btn-lg" id="btn-submit-answer" onclick="submitAnswer()" disabled data-i18n="exam.submit_answer">
+                Submit Answer
+            </button>
+        </div>
+    </div>
+
+    <!-- Feedback toast (shown after answer) -->
+    <div id="feedback-area"></div>
+
+    <!-- Explanation panel (shown after answer in learning mode) -->
+    <div id="explanation-area"></div>
+
+    <!-- Confidence bar (shown after answer) -->
+    <div id="confidence-area"></div>
+</div>
+
+<!-- Case study side panel -->
+<div id="case-study-panel" class="case-study-side-panel">
+    <div class="case-study-side-header">
+        <span class="case-study-badge" id="cs-topic-badge">TOPIC</span>
+        <span id="cs-company-name" style="font-weight: 600; font-size: 14px;"></span>
+        <button class="case-study-close" onclick="toggleCaseStudy()">&times;</button>
+    </div>
+    <div class="case-study-side-body" id="cs-body"></div>
+</div>
+<button class="case-study-show-btn" id="cs-show-btn" style="display: none;" onclick="toggleCaseStudy()">Case Study</button>
+
+<!-- Bottom bar -->
+<div class="bottom-bar">
+    <button class="btn btn-secondary" id="btn-prev" onclick="navigateQuestion(-1)">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+        </svg>
+        <span data-i18n="exam.previous">Previous</span>
+    </button>
+    <div class="progress-bar" style="flex: 1;">
+        <div class="progress-fill primary" id="progress-fill" style="width: 0%;"></div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <button class="btn btn-outline btn-sm" id="btn-flag" onclick="flagQuestion()">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/>
+            </svg>
+            <span data-i18n="exam.flag">Flag</span>
+        </button>
+        <button class="btn btn-primary" id="btn-next" onclick="navigateQuestion(1)">
+            <span data-i18n="exam.next">Next</span>
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+            </svg>
+        </button>
+        <button class="btn btn-success" id="btn-finish" onclick="finishSession()" style="display: none;" data-i18n="exam.finish_learning">
+            Finish
+        </button>
+    </div>
+</div>
+
+{% block extra_css_inline %}
+<style>
+.case-study-banner {
+    margin-bottom: 16px;
+}
+</style>
+{% endblock %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const SESSION_ID = "{{ session_id }}";
+</script>
+<script src="/static/js/learning_session.js?v=25"></script>
+{% endblock %}

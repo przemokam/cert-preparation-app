@@ -1,0 +1,15 @@
+fastapi==0.115.*
+uvicorn[standard]==0.34.*
+sqlalchemy==2.0.*
+alembic==1.14.*
+python-dotenv==1.0.*
+msal==1.31.*
+pyjwt[crypto]==2.10.*
+python-multipart==0.0.*
+aiofiles==24.*
+jinja2==3.1.*
+markdown==3.7.*
+azure-identity==1.19.*
+azure-keyvault-secrets==4.9.*
+httpx==0.28.*
+bcrypt==4.2.*
