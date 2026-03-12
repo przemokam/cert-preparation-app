@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% set active_page = "learning" %}
+
+{% block title %}Learning Mode — AZ-500{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 0 auto;">
+
+    <!-- Top bar -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+            <h1 class="page-title" data-i18n="learning.title">Question Bank</h1>
+            <p class="page-subtitle">AZ-500 · <span id="total-count">—</span> questions</p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <!-- Search -->
+            <div style="position: relative; flex: 1; min-width: 200px; max-width: 340px;">
+                <svg style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--c-text-muted); pointer-events: none;" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                        clip-rule="evenodd" />
+                </svg>
+                <input id="search-input" type="text" placeholder="Search questions..." data-i18n-placeholder="learning.search_placeholder"
+                    style="width: 100%; padding: 10px 16px 10px 38px; border: 1px solid var(--c-border); border-radius: 8px; background: var(--c-surface); color: var(--c-text); font-size: 14px; outline: none; font-family: inherit;"
+                    oninput="onSearch(this.value)">
+            </div>
+            <button class="btn btn-primary" id="start-session-btn" onclick="startSelectedSession()" data-i18n="learning.start_session">
+                Start Learning Session
+            </button>
+        </div>
+    </div>
+
+    <!-- Domain pills -->
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;" id="domain-pills">
+        <button class="btn btn-sm active" data-domain="" onclick="selectDomain(this, '')"
+            style="border-radius: 100px; padding: 6px 16px; font-size: 12px;">
+            All <span id="pill-count-all" style="opacity: 0.7; margin-left: 4px;">—</span>
+        </button>
+    </div>
+
+    <!-- Type chips -->
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px;" id="type-filters">
+        <button class="btn btn-ghost btn-sm active" data-type="" onclick="selectType(this, '')" data-i18n="learning.type_all">All types</button>
+        <button class="btn btn-ghost btn-sm" data-type="single_choice" onclick="selectType(this, 'single_choice')" data-i18n="learning.type_single">Single choice</button>
+        <button class="btn btn-ghost btn-sm" data-type="multi_choice" onclick="selectType(this, 'multi_choice')" data-i18n="learning.type_multi">Multi-choice</button>
+        <button class="btn btn-ghost btn-sm" data-type="yes_no_grid" onclick="selectType(this, 'yes_no_grid')" data-i18n="learning.type_yes_no">Yes / No</button>
+        <button class="btn btn-ghost btn-sm" data-type="dropdown" onclick="selectType(this, 'dropdown')" data-i18n="learning.type_dropdown">Dropdown</button>
+        <button class="btn btn-ghost btn-sm" data-type="drag_drop" onclick="selectType(this, 'drag_drop')" data-i18n="learning.type_drag_drop">Drag & Drop</button>
+    </div>
+
+    <!-- Questions list -->
+    <div id="questions-list" style="display: flex; flex-direction: column; gap: 8px;">
+        <!-- Loading skeleton -->
+        <div class="card" style="padding: 16px 20px; opacity: 0.5; animation: pulse 1.5s ease-in-out infinite;">
+            <div style="height: 14px; width: 60%; background: var(--c-border); border-radius: 4px; margin-bottom: 8px;"></div>
+            <div style="height: 12px; width: 90%; background: var(--c-border); border-radius: 4px;"></div>
+        </div>
+        <div class="card" style="padding: 16px 20px; opacity: 0.4; animation: pulse 1.5s ease-in-out infinite; animation-delay: 0.2s;">
+            <div style="height: 14px; width: 50%; background: var(--c-border); border-radius: 4px; margin-bottom: 8px;"></div>
+            <div style="height: 12px; width: 80%; background: var(--c-border); border-radius: 4px;"></div>
+        </div>
+    </div>
+
+    <div style="display: flex; justify-content: center; padding: 20px; display: none;" id="load-more-row">
+        <button class="btn btn-outline" onclick="loadMore()" data-i18n="learning.load_more">Load more questions</button>
+    </div>
+</div>
+
+<style>
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .domain-pill-btn { border-radius: 100px; padding: 6px 16px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--c-border); background: var(--c-surface); color: var(--c-text-secondary); transition: all 0.15s; }
+    .domain-pill-btn:hover { border-color: var(--c-primary); color: var(--c-primary); }
+    .domain-pill-btn.active { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
+
+    .type-chip-btn.active { background: var(--c-primary-muted); color: var(--c-primary); border-color: var(--c-primary); }
+
+    .q-card-item { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 10px; padding: 14px 18px; display: flex; align-items: flex-start; gap: 14px; cursor: pointer; transition: all 0.15s; text-decoration: none; color: inherit; }
+    .q-card-item:hover { border-color: var(--c-primary); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+
+    .q-num-badge { min-width: 34px; height: 34px; border-radius: 8px; background: var(--c-bg); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--c-text-muted); flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
+
+    .type-tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .type-tag.single_choice { background: var(--c-success-muted); color: var(--c-success); }
+    .type-tag.multi_choice { background: var(--c-primary-muted); color: var(--c-primary); }
+    .type-tag.yes_no_grid { background: var(--c-warning-muted); color: var(--c-warning); }
+    .type-tag.dropdown { background: rgba(139, 92, 246, 0.12); color: #a78bfa; }
+    .type-tag.drag_drop { background: var(--c-danger-muted); color: var(--c-danger); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentOffset = 0;
+    const LIMIT = 30;
+    let hasMore = true;
+    let activeDomainId = '';
+    let activeType = '';
+    let searchQuery = '';
+    let searchTimeout = null;
+    let domains = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            domains = await api('/questions/domains');
+            buildDomainPills(domains);
+            await loadQuestions(true);
+        } catch (e) {
+            console.error('Failed to init learning mode', e);
+        }
+    });
+
+    function buildDomainPills(domainList) {
+        const container = document.getElementById('domain-pills');
+        domainList.forEach(d => {
+            const pill = document.createElement('button');
+            pill.className = 'domain-pill-btn';
+            pill.dataset.domain = d.id;
+            pill.textContent = d.name;
+
+            const countSpan = document.createElement('span');
+            countSpan.id = 'pill-count-' + d.id;
+            countSpan.style.cssText = 'opacity: 0.7; margin-left: 4px; font-size: 11px;';
+            countSpan.textContent = '—';
+            pill.appendChild(countSpan);
+
+            pill.onclick = () => selectDomain(pill, d.id);
+            container.appendChild(pill);
+        });
+    }
+
+    function selectDomain(pill, domainId) {
+        document.querySelectorAll('#domain-pills button').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        activeDomainId = domainId ? String(domainId) : '';
+        loadQuestions(true);
+    }
+
+    function selectType(chip, type) {
+        document.querySelectorAll('#type-filters button').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        activeType = type;
+        loadQuestions(true);
+    }
+
+    function onSearch(val) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchQuery = val.trim();
+            loadQuestions(true);
+        }, 350);
+    }
+
+    async function loadQuestions(reset) {
+        if (reset) {
+            currentOffset = 0;
+            hasMore = true;
+            document.getElementById('questions-list').textContent = '';
+            document.getElementById('load-more-row').style.display = 'none';
+        }
+        if (!hasMore) return;
+
+        let url = '/questions/list?limit=' + LIMIT + '&offset=' + currentOffset;
+        if (activeDomainId) url += '&domain_id=' + activeDomainId;
+        if (activeType) url += '&q_type=' + activeType;
+        if (searchQuery) url += '&search=' + encodeURIComponent(searchQuery);
+
+        try {
+            const data = await api(url);
+            const total = data.total;
+
+            document.getElementById('total-count').textContent = total;
+            const allCount = document.getElementById('pill-count-all');
+            if (allCount) allCount.textContent = data.total_all || total;
+
+            domains.forEach(d => {
+                const el = document.getElementById('pill-count-' + d.id);
+                if (el && data.domain_counts) el.textContent = data.domain_counts[d.id] || 0;
+            });
+
+            const list = document.getElementById('questions-list');
+
+            if (data.items.length === 0 && reset) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'text-align: center; padding: 48px 20px; color: var(--c-text-muted);';
+                const title = document.createElement('p');
+                title.style.cssText = 'font-size: 15px; font-weight: 500; color: var(--c-text); margin-bottom: 4px;';
+                title.textContent = 'No questions found';
+                empty.appendChild(title);
+                const hint = document.createElement('p');
+                hint.style.cssText = 'font-size: 13px;';
+                hint.textContent = 'Try a different filter or search term.';
+                empty.appendChild(hint);
+                list.appendChild(empty);
+                return;
+            }
+
+            data.items.forEach((q, idx) => {
+                const num = currentOffset + idx + 1;
+                const card = document.createElement('div');
+                card.className = 'q-card-item';
+
+                // Number badge
+                const numBadge = document.createElement('div');
+                numBadge.className = 'q-num-badge';
+                numBadge.textContent = num;
+                card.appendChild(numBadge);
+
+                // Body
+                const body = document.createElement('div');
+                body.style.cssText = 'flex: 1; min-width: 0;';
+
+                // Meta row
+                const meta = document.createElement('div');
+                meta.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;';
+
+                const typeTag = document.createElement('span');
+                typeTag.className = 'type-tag ' + q.type;
+                typeTag.textContent = q.type.replace(/_/g, ' ');
+                meta.appendChild(typeTag);
+
+                const idSpan = document.createElement('span');
+                idSpan.style.cssText = 'font-size: 11px; color: var(--c-text-muted); font-family: "JetBrains Mono", monospace;';
+                idSpan.textContent = 'Q-' + q.id;
+                meta.appendChild(idSpan);
+
+                body.appendChild(meta);
+
+                // Question text preview
+                const textEl = document.createElement('div');
+                textEl.style.cssText = 'font-size: 13px; color: var(--c-text); line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+                let text = (q.text || '').replace(/\n/g, ' ');
+                if (text.length > 120) text = text.substring(0, 120) + '\u2026';
+                textEl.textContent = text;
+                body.appendChild(textEl);
+
+                // Domain
+                if (q.domains && q.domains.length > 0) {
+                    const domainEl = document.createElement('div');
+                    domainEl.style.cssText = 'font-size: 11px; color: var(--c-text-muted); margin-top: 3px;';
+                    domainEl.textContent = q.domains.join(' \u00b7 ');
+                    body.appendChild(domainEl);
+                }
+
+                card.appendChild(body);
+
+                // Study button
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-primary btn-sm';
+                btn.style.cssText = 'flex-shrink: 0; font-size: 12px;';
+                btn.textContent = 'Study';
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    studySingle(e, q.id);
+                };
+                card.appendChild(btn);
+
+                list.appendChild(card);
+            });
+
+            currentOffset += data.items.length;
+            if (currentOffset < total && data.items.length >= LIMIT) {
+                document.getElementById('load-more-row').style.display = 'flex';
+            } else {
+                document.getElementById('load-more-row').style.display = 'none';
+            }
+        } catch (e) {
+            console.error('Error loading questions:', e);
+        }
+    }
+
+    function loadMore() { loadQuestions(false); }
+
+    function startSelectedSession() {
+        const btn = document.getElementById('start-session-btn');
+        btn.disabled = true;
+        btn.textContent = 'Starting\u2026';
+
+        const payload = { mode: 'learning', num_questions: 500 };
+        if (activeDomainId) payload.domain_id = parseInt(activeDomainId);
+
+        api('/exam/start', { method: 'POST', body: payload }).then(data => {
+            if (data && data.session_id) {
+                window.location.href = '/learning/' + data.session_id;
+            }
+        }).catch(err => {
+            btn.disabled = false;
+            btn.textContent = 'Start Learning Session';
+            console.error('Failed to start session:', err);
+        });
+    }
+
+    function studySingle(event, qid) {
+        const btn = event.currentTarget;
+        btn.disabled = true;
+        btn.textContent = '\u2026';
+
+        const payload = { mode: 'learning', num_questions: 500 };
+        if (activeDomainId) payload.domain_id = parseInt(activeDomainId);
+
+        api('/exam/start', { method: 'POST', body: payload }).then(data => {
+            if (data && data.session_id) {
+                window.location.href = '/learning/' + data.session_id + '?start_q=' + qid;
+            }
+        }).catch(err => {
+            btn.disabled = false;
+            btn.textContent = 'Study';
+            console.error(err);
+        });
+    }
+</script>
+{% endblock %}
