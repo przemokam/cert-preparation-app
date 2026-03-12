@@ -1,5 +1,8 @@
 .env
 .venv/
+az500_local.db
+az500_local.db-shm
+az500_local.db-wal
 __pycache__/
 *.pyc
 *.pyo

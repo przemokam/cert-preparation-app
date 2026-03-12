@@ -16,7 +16,28 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DATABASE_URL = f"sqlite:///{(PROJECT_ROOT / 'az500_dev.db').as_posix()}"
+BUNDLED_DATABASE_PATH = PROJECT_ROOT / "az500_dev.db"
+LOCAL_DATABASE_PATH = PROJECT_ROOT / "az500_local.db"
+BUNDLED_DATABASE_URL = f"sqlite:///{BUNDLED_DATABASE_PATH.as_posix()}"
+LOCAL_DATABASE_URL = f"sqlite:///{LOCAL_DATABASE_PATH.as_posix()}"
+LEGACY_LOCAL_DATABASE_URLS = {
+    "sqlite:///./az500_dev.db",
+    BUNDLED_DATABASE_URL,
+}
+LOCAL_DATABASE_URL_ALIASES = {
+    "sqlite:///./az500_local.db",
+    LOCAL_DATABASE_URL,
+}
+
+
+def resolve_database_url(raw_database_url: str, environment: str) -> str:
+    """Use an ignored local working DB in local mode, including legacy .env values."""
+    if environment == "local":
+        if not raw_database_url or raw_database_url in LEGACY_LOCAL_DATABASE_URLS:
+            return LOCAL_DATABASE_URL
+        if raw_database_url in LOCAL_DATABASE_URL_ALIASES:
+            return LOCAL_DATABASE_URL
+    return raw_database_url or BUNDLED_DATABASE_URL
 
 
 class Settings:
@@ -24,7 +45,7 @@ class Settings:
     ENTRA_CLIENT_ID: str = os.getenv("ENTRA_CLIENT_ID", "")
     ENTRA_CLIENT_SECRET: str = os.getenv("ENTRA_CLIENT_SECRET", "")
     ENTRA_TENANT_ID: str = os.getenv("ENTRA_TENANT_ID", "")
-    DATABASE_URL: str = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
+    DATABASE_URL: str = resolve_database_url(os.getenv("DATABASE_URL", ""), ENVIRONMENT)
     REDIRECT_URI: str = os.getenv("REDIRECT_URI", "http://localhost:8000/auth/callback")
     KEY_VAULT_URL: str = os.getenv("KEY_VAULT_URL", "")
 

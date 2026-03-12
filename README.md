@@ -28,6 +28,7 @@ cp .env.example .env
 ```
 
 The example file already contains safe local defaults for running the app on your machine.
+On first start, the app creates a private working database `az500_local.db` from the bundled `az500_dev.db` seed, so your local progress is not written into tracked git files.
 
 ### 3. Start the app
 
@@ -60,7 +61,17 @@ Notes:
 
 - `git pull origin main` updates the tracked app files to the newest published version.
 - If `requirements.txt` changed, re-running `pip install -r requirements.txt` updates your local environment.
-- Your local `az500_dev.db` may contain your own study progress. If you want a fully fresh database after an update, restore the version from git with `git checkout -- az500_dev.db` before restarting the app.
+- Your study progress now lives in the ignored local file `az500_local.db`, so normal updates should not be blocked by database changes.
+- If you want to rebuild your local working database from the latest bundled seed, delete `az500_local.db` and restart the app.
+
+### One-time migration for older installs
+
+If your existing local copy was created before this change, your app may still have written progress into the tracked `az500_dev.db` file. In that case, run this once before pulling:
+
+```bash
+git checkout -- az500_dev.db
+git pull origin main
+```
 
 ## Important note
 
@@ -85,7 +96,8 @@ cert-preparation-app/
 
 ## Runtime notes
 
-- Local database path defaults to `az500_dev.db` in the project root.
+- Bundled seed database: `az500_dev.db`.
+- Local working database: `az500_local.db` (git-ignored, auto-created on first start).
 - Local mode uses SQLite and a dev-login flow.
 - Production SSO / cloud deployment configuration is not part of this student package.
 - Source study-material markdown files for `study-plan/day/*` and `/study-plan/cheatsheet` are bundled in `Claude_skany_materiały/Materiały do nauki - notion/`.
@@ -109,4 +121,4 @@ cert-preparation-app/
 
 ### Database was modified during local study
 
-The bundled `az500_dev.db` is the working local database. If you want to reset your local progress, restore the clean tracked copy with `git checkout -- az500_dev.db`.
+The app stores your local study progress in `az500_local.db`. If you want to reset your local progress, delete `az500_local.db` and restart the app.
