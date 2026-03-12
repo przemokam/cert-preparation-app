@@ -3,25 +3,50 @@
  * All DOM construction is safe (no innerHTML).
  */
 
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        const [stats, mastery, streak, weakSpots, history] = await Promise.all([
+let statsPageData = null;
+let statsPagePromise = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (Object.keys(I18N.translations || {}).length > 0) {
+        initStatsPage();
+    }
+});
+
+document.addEventListener('i18n:ready', initStatsPage);
+
+function statsText(key, fallback, params) {
+    return t(`stats.${key}`, params) || fallback;
+}
+
+async function ensureStatsPageData() {
+    if (statsPageData) return statsPageData;
+    if (!statsPagePromise) {
+        statsPagePromise = Promise.all([
             api('/analytics/stats'),
             api('/analytics/mastery'),
             api('/analytics/streak'),
             api('/analytics/weak-spots'),
             api('/exam/history'),
-        ]);
+        ]).then(([stats, mastery, streak, weakSpots, history]) => {
+            statsPageData = { stats, mastery, streak, weakSpots, history };
+            return statsPageData;
+        });
+    }
+    return statsPagePromise;
+}
 
-        renderSummaryCards(stats, streak);
-        renderMasteryDomains(mastery);
-        renderDomainAccuracy(stats);
-        renderWeakSpots(weakSpots);
-        renderExamHistory(history);
+async function initStatsPage() {
+    try {
+        const data = await ensureStatsPageData();
+        renderSummaryCards(data.stats, data.streak);
+        renderMasteryDomains(data.mastery);
+        renderDomainAccuracy(data.stats);
+        renderWeakSpots(data.weakSpots);
+        renderExamHistory(data.history);
     } catch (e) {
         console.error('Failed to load statistics:', e);
     }
-});
+}
 
 
 function renderSummaryCards(stats, streak) {
@@ -57,7 +82,7 @@ function renderMasteryDomains(mastery) {
         const countEl = document.createElement('span');
         countEl.style.cssText = 'font-size: 12px; font-family: "JetBrains Mono", monospace; color: var(--c-text-muted);';
         const mastered = (boxes[4] || 0) + (boxes[5] || 0);
-        countEl.textContent = mastered + '/' + total + ' mastered';
+        countEl.textContent = statsText('mastered_count', `${mastered}/${total} mastered`, { count: mastered, total });
         label.appendChild(countEl);
 
         row.appendChild(label);
@@ -67,10 +92,10 @@ function renderMasteryDomains(mastery) {
         bar.style.cssText = 'display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--c-border);';
 
         const segments = [
-            { count: boxes[0] || 0, color: 'var(--c-border)', label: 'Unseen' },
-            { count: boxes[1] || 0, color: 'var(--c-danger)', label: 'Wrong' },
-            { count: (boxes[2] || 0) + (boxes[3] || 0), color: 'var(--c-warning)', label: 'Learning' },
-            { count: (boxes[4] || 0) + (boxes[5] || 0), color: 'var(--c-success)', label: 'Mastered' },
+            { count: boxes[0] || 0, color: 'var(--c-border)', label: statsText('legend_unseen', 'Unseen') },
+            { count: boxes[1] || 0, color: 'var(--c-danger)', label: statsText('legend_wrong', 'Wrong') },
+            { count: (boxes[2] || 0) + (boxes[3] || 0), color: 'var(--c-warning)', label: statsText('legend_learning', 'Learning') },
+            { count: (boxes[4] || 0) + (boxes[5] || 0), color: 'var(--c-success)', label: statsText('legend_mastered', 'Mastered') },
         ];
 
         segments.forEach(seg => {
@@ -88,7 +113,14 @@ function renderMasteryDomains(mastery) {
         const detail = document.createElement('div');
         detail.style.cssText = 'display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap;';
 
-        const boxLabels = ['Unseen', 'New/Wrong', 'Shaky', 'Learning', 'Known', 'Mastered'];
+        const boxLabels = [
+            statsText('box_unseen', 'Unseen'),
+            statsText('box_new_wrong', 'New/Wrong'),
+            statsText('box_shaky', 'Shaky'),
+            statsText('box_learning', 'Learning'),
+            statsText('box_known', 'Known'),
+            statsText('box_mastered', 'Mastered'),
+        ];
         boxes.forEach((count, i) => {
             if (count <= 0) return;
             const chip = document.createElement('span');
@@ -110,7 +142,7 @@ function renderDomainAccuracy(stats) {
     if (!stats || !stats.domains || stats.domains.length === 0) {
         const msg = document.createElement('p');
         msg.style.cssText = 'color: var(--c-text-muted); font-size: 13px;';
-        msg.textContent = 'No answers yet. Start practicing to see your accuracy.';
+        msg.textContent = statsText('no_answers_yet', 'No answers yet. Start practicing to see your accuracy.');
         container.appendChild(msg);
         return;
     }
@@ -150,7 +182,7 @@ function renderDomainAccuracy(stats) {
         // Weight badge
         const weight = document.createElement('div');
         weight.style.cssText = 'font-size: 10px; color: var(--c-text-muted); margin-top: 2px;';
-        weight.textContent = 'Exam weight: ' + d.weight_min + '-' + d.weight_max + '%';
+        weight.textContent = statsText('exam_weight', `Exam weight: ${d.weight_min}-${d.weight_max}%`, { min: d.weight_min, max: d.weight_max });
         row.appendChild(weight);
 
         container.appendChild(row);
@@ -165,7 +197,7 @@ function renderWeakSpots(data) {
     if (!data || !data.weak_spots || data.weak_spots.length === 0) {
         const msg = document.createElement('p');
         msg.style.cssText = 'color: var(--c-text-muted); font-size: 13px;';
-        msg.textContent = 'No weak spots detected. Great job!';
+        msg.textContent = statsText('no_weak_spots', 'No weak spots detected. Great job!');
         container.appendChild(msg);
         return;
     }
@@ -179,7 +211,7 @@ function renderWeakSpots(data) {
 
         const badge = document.createElement('span');
         badge.style.cssText = 'font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: var(--c-danger-muted); color: var(--c-danger); white-space: nowrap;';
-        badge.textContent = ws.error_rate + '% errors';
+        badge.textContent = statsText('error_rate', `${ws.error_rate}% errors`, { rate: ws.error_rate });
         left.appendChild(badge);
 
         const nameSpan = document.createElement('span');
@@ -194,14 +226,14 @@ function renderWeakSpots(data) {
 
         const attemptsSpan = document.createElement('span');
         attemptsSpan.style.cssText = 'font-size: 11px; color: var(--c-text-muted);';
-        attemptsSpan.textContent = ws.total_attempts + ' attempts';
+        attemptsSpan.textContent = statsText('attempts', `${ws.total_attempts} attempts`, { count: ws.total_attempts });
         left.appendChild(attemptsSpan);
 
         row.appendChild(left);
 
         const btn = document.createElement('button');
         btn.className = 'btn btn-outline btn-sm';
-        btn.textContent = 'Practice';
+        btn.textContent = statsText('practice_btn', 'Practice');
         btn.onclick = () => startLearning('learning_domain', ws.domain_id);
         row.appendChild(btn);
 
@@ -217,7 +249,7 @@ function renderExamHistory(data) {
     if (!data || !data.history) {
         const msg = document.createElement('p');
         msg.style.cssText = 'color: var(--c-text-muted); font-size: 13px;';
-        msg.textContent = 'No mock exams completed yet.';
+        msg.textContent = statsText('no_exams', 'No mock exams completed yet.');
         container.appendChild(msg);
         return;
     }
@@ -226,7 +258,7 @@ function renderExamHistory(data) {
     if (mockExams.length === 0) {
         const msg = document.createElement('p');
         msg.style.cssText = 'color: var(--c-text-muted); font-size: 13px;';
-        msg.textContent = 'No mock exams completed yet. Take a mock exam to see your results here.';
+        msg.textContent = statsText('no_exams_detailed', 'No mock exams completed yet. Take a mock exam to see your results here.');
         container.appendChild(msg);
         return;
     }
@@ -238,7 +270,7 @@ function renderExamHistory(data) {
 
         const label = document.createElement('span');
         label.style.cssText = 'font-size: 13px; color: var(--c-text);';
-        label.textContent = 'Exam Readiness: ';
+        label.textContent = statsText('exam_readiness', 'Exam Readiness: ');
         readiness.appendChild(label);
 
         const score = document.createElement('span');
@@ -248,7 +280,7 @@ function renderExamHistory(data) {
 
         const passInfo = document.createElement('span');
         passInfo.style.cssText = 'font-size: 12px; color: var(--c-text-muted); margin-left: auto;';
-        passInfo.textContent = data.readiness.exams_passed + '/' + data.readiness.exams_total + ' exams passed';
+        passInfo.textContent = statsText('exams_passed_count', `${data.readiness.exams_passed}/${data.readiness.exams_total} exams passed`, { passed: data.readiness.exams_passed, total: data.readiness.exams_total });
         readiness.appendChild(passInfo);
 
         container.appendChild(readiness);
@@ -261,7 +293,13 @@ function renderExamHistory(data) {
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
     headerRow.style.cssText = 'border-bottom: 1px solid var(--c-border);';
-    ['Date', 'Score', 'Result', 'Questions', ''].forEach(text => {
+    [
+        statsText('date', 'Date'),
+        statsText('score', 'Score'),
+        statsText('result', 'Result'),
+        statsText('questions', 'Questions'),
+        ''
+    ].forEach(text => {
         const th = document.createElement('th');
         th.style.cssText = 'text-align: left; padding: 8px 8px 8px 0; font-size: 11px; font-weight: 600; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: 0.5px;';
         th.textContent = text;
@@ -293,7 +331,7 @@ function renderExamHistory(data) {
         tdResult.style.cssText = 'padding: 10px 8px 10px 0;';
         const badge = document.createElement('span');
         badge.style.cssText = 'font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 6px;';
-        badge.textContent = exam.passed ? 'Pass' : 'Fail';
+        badge.textContent = exam.passed ? statsText('pass', 'Pass') : statsText('fail', 'Fail');
         badge.style.background = exam.passed ? 'var(--c-success-muted)' : 'var(--c-danger-muted)';
         badge.style.color = exam.passed ? 'var(--c-success)' : 'var(--c-danger)';
         tdResult.appendChild(badge);
@@ -311,7 +349,7 @@ function renderExamHistory(data) {
         const link = document.createElement('a');
         link.href = '/results/' + exam.session_id;
         link.className = 'btn btn-ghost btn-sm';
-        link.textContent = 'Details';
+        link.textContent = statsText('details', 'Details');
         tdAction.appendChild(link);
         tr.appendChild(tdAction);
 

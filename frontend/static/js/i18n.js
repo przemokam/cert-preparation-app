@@ -7,6 +7,7 @@
 const I18N = {
     currentLang: localStorage.getItem('lang') || 'en',
     translations: {},
+    assetVersion: '25',
 
     async init() {
         await this.loadLanguage(this.currentLang);
@@ -17,7 +18,7 @@ const I18N = {
 
     async loadLanguage(lang) {
         try {
-            const resp = await fetch(`/static/i18n/${lang}.json`);
+            const resp = await fetch(`/static/i18n/${lang}.json?v=${this.assetVersion}`);
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             this.translations = await resp.json();
             this.currentLang = lang;
