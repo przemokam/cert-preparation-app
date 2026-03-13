@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set active_page = "learning" %}
 
-{% block title %}Learning — AZ-500{% endblock %}
+{% block title %}Learning{% if shell and shell.resolved_cert %} — {{ shell.resolved_cert.exam_code }}{% endif %}{% endblock %}
 
 {% block sidebar_extra %}
 <div class="sidebar-navigator">
@@ -23,7 +23,7 @@
 <!-- Top bar -->
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
     <div>
-        <h1 class="page-title" id="session-title" data-i18n="learning.title">AZ-500 Learning</h1>
+        <h1 class="page-title" id="session-title">{% if shell and shell.resolved_cert %}{{ shell.resolved_cert.exam_code }}{% else %}Certification{% endif %} Learning</h1>
         <p class="page-subtitle" id="question-counter" data-i18n="learning.loading">Loading...</p>
     </div>
     <span class="badge badge-domain" id="question-domain" style="display: none;"></span>

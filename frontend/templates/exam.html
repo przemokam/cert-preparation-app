@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set active_page = "mock_exam" %}
 
-{% block title %}Mock Exam — AZ-500{% endblock %}
+{% block title %}Mock Exam{% if shell and shell.resolved_cert %} — {{ shell.resolved_cert.exam_code }}{% endif %}{% endblock %}
 
 {% block sidebar_extra %}
 <div class="sidebar-navigator">
@@ -23,7 +23,7 @@
 <!-- Top bar with timer -->
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
     <div>
-        <h1 class="page-title">AZ-500 Mock Exam</h1>
+        <h1 class="page-title">{% if shell and shell.resolved_cert %}{{ shell.resolved_cert.exam_code }} {% endif %}Mock Exam</h1>
         <p class="page-subtitle" id="question-counter">Loading...</p>
     </div>
     <div class="timer" id="exam-timer">

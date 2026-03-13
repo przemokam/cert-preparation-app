@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
@@ -7,62 +7,105 @@
     <title>{% block title %}AZ-500 Exam Simulator{% endblock %} — Cybersteps</title>
     <meta name="description"
         content="{% block description %}Microsoft AZ-500 Azure Security Technologies exam preparation{% endblock %}">
+    <script>
+        (function() {
+            try {
+                document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+            } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="/static/css/style.css?v=25">
+    <link rel="stylesheet" href="/static/css/style.css?v=26">
     {% block extra_css %}{% endblock %}
 </head>
 
-<body>
+<body
+    data-certification-code="{{ shell.resolved_cert.exam_code if shell and shell.resolved_cert else (shell.active_cert.exam_code if shell and shell.active_cert else '') }}"
+    data-certification-slug="{{ shell.resolved_cert.certification_slug if shell and shell.resolved_cert else (shell.active_cert.certification_slug if shell and shell.active_cert else '') }}">
     <div class="app-layout">
-        <!-- Sidebar -->
         <nav class="sidebar">
             <div class="sidebar-logo">
                 <img src="/static/img/logo_cybersteps.webp" alt="Cybersteps"
                     style="width: 150px; height: auto; object-fit: contain;">
             </div>
 
+            <div class="sidebar-cert-switcher">
+                <div class="sidebar-section-label" data-i18n="shell.active_certification">Active certification</div>
+                <a href="{{ shell.switch_href if shell else '/certifications' }}" class="cert-switcher-card">
+                    {% if shell and shell.active_cert %}
+                    <div class="cert-switcher-code">{{ shell.active_cert.exam_code }}</div>
+                    <div class="cert-switcher-copy">
+                        <div class="cert-switcher-title">{{ shell.active_cert.title }}</div>
+                        <div class="cert-switcher-meta">{{ shell.active_cert.vendor_name }} · {{ shell.active_cert.level }}</div>
+                    </div>
+                    <span class="cert-switcher-action" data-i18n="shell.switch_certification">Switch</span>
+                    {% else %}
+                    <div class="cert-switcher-empty">
+                        <div class="cert-switcher-title" data-i18n="shell.no_cert_selected">No certification selected</div>
+                        <div class="cert-switcher-meta" data-i18n="shell.choose_certification">Choose a certification to unlock scoped areas.</div>
+                    </div>
+                    <span class="cert-switcher-action" data-i18n="shell.switch_certification">Switch</span>
+                    {% endif %}
+                </a>
+            </div>
+
             <div class="sidebar-nav">
-                <a href="/" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}" id="nav-dashboard">
+                <a href="{{ shell.nav.hub if shell else '/certifications' }}" class="nav-item {% if shell and shell.current_page == 'hub' %}active{% endif %}" id="nav-hub">
+                    <svg viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 2a1 1 0 01.707.293l6 6A1 1 0 0117 9v7a2 2 0 01-2 2H5a2 2 0 01-2-2V9a1 1 0 01.293-.707l6-6A1 1 0 0110 2zm0 2.414L5 9.414V16h10V9.414l-5-5z" clip-rule="evenodd"/>
+                    </svg>
+                    <span data-i18n="nav.certification_hub">Certification Hub</span>
+                </a>
+                <a href="{{ shell.nav.dashboard if shell else '/dashboard' }}" class="nav-item {% if shell and shell.current_page == 'dashboard' %}active{% endif %}" id="nav-dashboard">
                     <svg viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10 3.22l6 4.5V15a1 1 0 01-1 1h-3v-4H8v4H5a1 1 0 01-1-1V7.72l6-4.5z" />
                     </svg>
                     <span data-i18n="nav.dashboard">Dashboard</span>
                 </a>
-                <a href="/learning" class="nav-item {% if active_page == 'learning' %}active{% endif %}"
+                <a href="{{ shell.nav.learn if shell else '/learn' }}" class="nav-item {% if shell and shell.current_page == 'learning' %}active{% endif %}"
                     id="nav-learning">
                     <svg viewBox="0 0 20 20" fill="currentColor">
                         <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.968 7.968 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
                     </svg>
-                    <span data-i18n="nav.learning">Learning</span>
+                    <span data-i18n="nav.learn">Learn</span>
                 </a>
-                <a href="#" onclick="startMockExam(); return false;"
-                    class="nav-item {% if active_page == 'mock_exam' %}active{% endif %}" id="nav-mock-exam">
+                <a href="{{ shell.nav.mock_exams if shell else '/mock-exams' }}"
+                    class="nav-item {% if shell and shell.current_page == 'mock_exams' %}active{% endif %}" id="nav-mock-exam">
                     <svg viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd"
                             d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
                             clip-rule="evenodd" />
                     </svg>
-                    <span data-i18n="nav.mock_exam">Mock Exam</span>
+                    <span data-i18n="nav.mock_exams">Mock exams</span>
                 </a>
-                <a href="/study-plan" class="nav-item {% if active_page == 'study_plan' %}active{% endif %}" id="nav-study-plan">
+                <a href="{{ shell.nav.study_plan if shell else '/study-plan' }}" class="nav-item {% if shell and shell.current_page == 'study_plan' %}active{% endif %}" id="nav-study-plan">
                     <svg viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
                     </svg>
                     <span data-i18n="nav.study_plan">Study Plan</span>
                 </a>
-                <a href="/review" class="nav-item {% if active_page == 'review' %}active{% endif %}" id="nav-review">
+                <a href="{{ shell.nav.materials if shell else '/materials' }}" class="nav-item {% if shell and shell.current_page == 'materials' %}active{% endif %}" id="nav-materials">
+                    <svg viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0013.414 6L10 2.586A2 2 0 008.586 2H4zm5 1.414L12.586 8H10a1 1 0 01-1-1V4.414z"/>
+                        <path d="M15 6h1a2 2 0 012 2v8a2 2 0 01-2 2H7a2 2 0 01-2-2v-1h9a1 1 0 001-1V6z"/>
+                    </svg>
+                    <span data-i18n="nav.materials">Materials</span>
+                </a>
+                <a href="{{ shell.nav.review if shell else '/review?scope=all' }}" class="nav-item {% if shell and shell.current_page == 'review' %}active{% endif %}" id="nav-review">
                     <svg viewBox="0 0 20 20" fill="currentColor">
                         <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
                     </svg>
-                    <span data-i18n="nav.review_pool">Review Pool</span>
+                    <span data-i18n="nav.review">Review</span>
                     <span class="nav-badge hidden" id="review-badge">0</span>
                 </a>
-                <a href="/stats" class="nav-item {% if active_page == 'stats' %}active{% endif %}" id="nav-stats">
+                <a href="{{ shell.nav.stats if shell else '/stats?scope=all' }}" class="nav-item {% if shell and shell.current_page == 'stats' %}active{% endif %}" id="nav-stats">
                     <svg viewBox="0 0 20 20" fill="currentColor">
                         <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
                     </svg>
-                    <span data-i18n="nav.statistics">Statistics</span>
+                    <span data-i18n="nav.stats">Stats</span>
                 </a>
             </div>
 
@@ -86,25 +129,54 @@
                         <button data-lang="de" onclick="I18N.switchTo('de')">DE</button>
                     </div>
                 </div>
-                <a href="/logout" class="nav-item" style="margin-top: 8px; font-size: 13px;">
+                <a href="{{ '/logout' if user else '/login' }}" class="nav-item" style="margin-top: 8px; font-size: 13px;">
                     <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
                         <path fill-rule="evenodd"
                             d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
                             clip-rule="evenodd" />
                     </svg>
-                    <span data-i18n="nav.logout">Log out</span>
+                    <span data-i18n="{{ 'nav.logout' if user else 'nav.login' }}">{{ 'Log out' if user else 'Log in' }}</span>
                 </a>
             </div>
         </nav>
 
-        <!-- Main Content -->
         <main class="main-content">
+            {% if shell %}
+            <div class="shell-context-bar">
+                <div class="shell-breadcrumbs">
+                    {% for crumb in shell.breadcrumbs %}
+                        {% if crumb.href %}
+                        <a href="{{ crumb.href }}">{{ crumb.label }}</a>
+                        {% else %}
+                        <span>{{ crumb.label }}</span>
+                        {% endif %}
+                        {% if not loop.last %}<span class="shell-breadcrumb-sep">/</span>{% endif %}
+                    {% endfor %}
+                </div>
+                <div class="shell-context-summary">
+                    {% if shell.context_mode == 'global' %}
+                    <span class="badge shell-context-pill" data-i18n="shell.all_certifications">All certifications</span>
+                    {% elif shell.resolved_cert %}
+                    <span class="badge badge-domain shell-context-pill">{{ shell.resolved_cert.exam_code }}</span>
+                    <span class="shell-context-title">{{ shell.resolved_cert.title }}</span>
+                    {% elif shell.active_cert %}
+                    <span class="badge badge-domain shell-context-pill">{{ shell.active_cert.exam_code }}</span>
+                    <span class="shell-context-title">{{ shell.active_cert.title }}</span>
+                    {% else %}
+                    <span class="badge shell-context-pill shell-context-pill--warning" data-i18n="shell.no_cert_selected">No certification selected</span>
+                    {% endif %}
+                    {% if shell.context_note %}
+                    <span class="shell-context-note">{{ shell.context_note }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
             {% block content %}{% endblock %}
         </main>
     </div>
 
-    <script src="/static/js/i18n.js?v=24"></script>
-    <script src="/static/js/app.js?v=25"></script>
+    <script src="/static/js/i18n.js?v=27"></script>
+    <script src="/static/js/app.js?v=27"></script>
     {% block extra_js %}{% endblock %}
 </body>
 

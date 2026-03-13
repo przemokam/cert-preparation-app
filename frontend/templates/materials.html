@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Materials{% if shell and shell.resolved_cert %} — {{ shell.resolved_cert.exam_code }}{% endif %}{% endblock %}
+
+{% block content %}
+<div style="max-width: 920px; margin: 0 auto;">
+    <div class="page-header">
+        <h1 class="page-title">Materials</h1>
+        <p class="page-subtitle">Browse certification-specific study material, day-by-day references, and the quick-reference cheatsheet.</p>
+    </div>
+
+    <div class="card" style="padding: 18px 22px; margin-bottom: 18px; display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <div>
+            <div style="font-size: 15px; font-weight: 600;">Need the schedule first?</div>
+            <div style="font-size: 13px; color: var(--c-text-muted);">Open the study plan for pacing, checkpoints, and daily progress.</div>
+        </div>
+        <a href="{{ study_plan_href }}" class="btn btn-outline">Open Study plan</a>
+    </div>
+
+    {% if not materials_available %}
+    <div class="card" style="padding: 20px;">
+        <div style="font-size: 15px; font-weight: 600; margin-bottom: 6px;" data-i18n="materials.coming_soon_title">Materials coming soon</div>
+        <div style="font-size: 13px; color: var(--c-text-muted);" data-i18n="materials.coming_soon_hint">This certification shell is active, but bundled reading material and cheatsheets are not published for it yet.</div>
+    </div>
+    {% else %}
+    <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 18px;">
+        {% for day in material_days %}
+        <a href="{{ day.href }}" class="card" style="padding: 20px; text-decoration: none; color: inherit;">
+            <div class="badge">Day {{ day.day_number }}</div>
+            <h3 style="margin: 14px 0 6px; font-size: 17px;">{{ day.title }}</h3>
+            <p style="margin: 0; color: var(--c-text-muted); font-size: 13px;">Open day-specific reading material and notes.</p>
+        </a>
+        {% endfor %}
+    </div>
+
+    <a href="{{ cheatsheet_href }}" class="card" style="padding: 18px 22px; display: flex; gap: 16px; align-items: center; text-decoration: none; border: 1px solid var(--c-primary);">
+        <div style="font-size: 24px;">📘</div>
+        <div style="flex: 1;">
+            <div style="font-size: 15px; font-weight: 600; color: var(--c-primary);">Cheatsheet &amp; quick reference</div>
+            <div style="font-size: 13px; color: var(--c-text-muted);">Exam traps, trackers, official links, and condensed review tables.</div>
+        </div>
+        <div style="font-size: 20px; color: var(--c-primary);">→</div>
+    </a>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,26 +1,26 @@
 {% extends "base.html" %}
 {% set active_page = "study_plan" %}
 
-{% block title %}Day {{ day_number }} — {{ day_title }} — AZ-500{% endblock %}
+{% block title %}Day {{ day_number }} — {{ day_title }}{% if shell and shell.resolved_cert %} — {{ shell.resolved_cert.exam_code }}{% endif %}{% endblock %}
 
 {% block content %}
 <div class="study-day-page">
 
     <!-- Breadcrumb + nav -->
     <div class="study-day-nav">
-        <a href="/study-plan" class="study-back-link">
+        <a href="{{ back_href }}" class="study-back-link">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span data-i18n="study_plan.study_plan_link">Study Plan</span>
+            <span>Materials</span>
         </a>
         <div class="study-day-pager">
             {% if day_number > 1 %}
-            <a href="/study-plan/day/{{ day_number - 1 }}" class="study-pager-btn" title="Previous day">
+            <a href="{{ prev_href }}" class="study-pager-btn" title="Previous day">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 Day {{ day_number - 1 }}
             </a>
             {% endif %}
             {% if day_number < 7 %}
-            <a href="/study-plan/day/{{ day_number + 1 }}" class="study-pager-btn" title="Next day">
+            <a href="{{ next_href }}" class="study-pager-btn" title="Next day">
                 Day {{ day_number + 1 }}
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
@@ -33,7 +33,7 @@
         <div class="study-day-badge">{{ day_number }}</div>
         <div>
             <h1 class="study-day-title">Day {{ day_number }} &mdash; {{ day_title }}</h1>
-            <p class="study-day-subtitle">AZ-500 Exam Preparation</p>
+            <p class="study-day-subtitle">{% if shell and shell.resolved_cert %}{{ shell.resolved_cert.exam_code }} · {{ shell.resolved_cert.title }}{% else %}Certification materials{% endif %}</p>
         </div>
     </div>
 
@@ -55,16 +55,16 @@
     <!-- Bottom navigation -->
     <div class="study-day-bottom-nav">
         {% if day_number > 1 %}
-        <a href="/study-plan/day/{{ day_number - 1 }}" class="btn btn--outline">
+        <a href="{{ prev_href }}" class="btn btn--outline">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Day {{ day_number - 1 }}
         </a>
         {% else %}
         <span></span>
         {% endif %}
-        <a href="/study-plan" class="btn btn--outline" data-i18n="study_plan.back_to_plan">Back to Plan</a>
+        <a href="{{ back_href }}" class="btn btn--outline">Back to Materials</a>
         {% if day_number < 7 %}
-        <a href="/study-plan/day/{{ day_number + 1 }}" class="btn btn--primary">
+        <a href="{{ next_href }}" class="btn btn--primary">
             Day {{ day_number + 1 }}
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>

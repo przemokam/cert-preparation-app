@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set active_page = "learning" %}
 
-{% block title %}Learning Mode — AZ-500{% endblock %}
+{% block title %}Learn{% if shell and shell.resolved_cert %} — {{ shell.resolved_cert.exam_code }}{% endif %}{% endblock %}
 
 {% block content %}
 <div style="max-width: 860px; margin: 0 auto;">
@@ -10,7 +10,7 @@
     <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
         <div>
             <h1 class="page-title" data-i18n="learning.title">Question Bank</h1>
-            <p class="page-subtitle">AZ-500 · <span id="total-count">—</span> questions</p>
+            <p class="page-subtitle">{% if shell and shell.resolved_cert %}{{ shell.resolved_cert.exam_code }}{% else %}Certification{% endif %} · <span id="total-count">—</span> questions</p>
         </div>
         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
             <!-- Search -->
@@ -99,10 +99,14 @@
     let searchQuery = '';
     let searchTimeout = null;
     let domains = [];
+    const certificationCode = getActiveCertificationCode();
 
     document.addEventListener('DOMContentLoaded', async () => {
         try {
-            domains = await api('/questions/domains');
+            const domainUrl = certificationCode
+                ? '/questions/domains?certification_code=' + encodeURIComponent(certificationCode)
+                : '/questions/domains';
+            domains = await api(domainUrl);
             buildDomainPills(domains);
             await loadQuestions(true);
         } catch (e) {
@@ -161,6 +165,7 @@
         if (!hasMore) return;
 
         let url = '/questions/list?limit=' + LIMIT + '&offset=' + currentOffset;
+        if (certificationCode) url += '&certification_code=' + encodeURIComponent(certificationCode);
         if (activeDomainId) url += '&domain_id=' + activeDomainId;
         if (activeType) url += '&q_type=' + activeType;
         if (searchQuery) url += '&search=' + encodeURIComponent(searchQuery);
@@ -168,10 +173,15 @@
         try {
             const data = await api(url);
             const total = data.total;
+            const startBtn = document.getElementById('start-session-btn');
 
             document.getElementById('total-count').textContent = total;
             const allCount = document.getElementById('pill-count-all');
             if (allCount) allCount.textContent = data.total_all || total;
+            startBtn.disabled = total === 0;
+            startBtn.textContent = total === 0
+                ? (t('learning.no_questions_available') || 'No Questions Available')
+                : (t('learning.start_session') || 'Start Learning Session');
 
             domains.forEach(d => {
                 const el = document.getElementById('pill-count-' + d.id);
@@ -273,19 +283,20 @@
 
     function startSelectedSession() {
         const btn = document.getElementById('start-session-btn');
+        if (btn.disabled) return;
         btn.disabled = true;
         btn.textContent = 'Starting\u2026';
 
-        const payload = { mode: 'learning', num_questions: 500 };
+        const payload = { mode: 'learning', num_questions: 500, certification_code: certificationCode };
         if (activeDomainId) payload.domain_id = parseInt(activeDomainId);
 
         api('/exam/start', { method: 'POST', body: payload }).then(data => {
             if (data && data.session_id) {
-                window.location.href = '/learning/' + data.session_id;
+                window.location.href = '/learn/session/' + data.session_id;
             }
         }).catch(err => {
             btn.disabled = false;
-            btn.textContent = 'Start Learning Session';
+            btn.textContent = t('learning.start_session') || 'Start Learning Session';
             console.error('Failed to start session:', err);
         });
     }
@@ -295,12 +306,12 @@
         btn.disabled = true;
         btn.textContent = '\u2026';
 
-        const payload = { mode: 'learning', num_questions: 500 };
+        const payload = { mode: 'learning', num_questions: 500, certification_code: certificationCode };
         if (activeDomainId) payload.domain_id = parseInt(activeDomainId);
 
         api('/exam/start', { method: 'POST', body: payload }).then(data => {
             if (data && data.session_id) {
-                window.location.href = '/learning/' + data.session_id + '?start_q=' + qid;
+                window.location.href = '/learn/session/' + data.session_id + '?start_q=' + qid;
             }
         }).catch(err => {
             btn.disabled = false;

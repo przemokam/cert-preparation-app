@@ -1,15 +1,22 @@
 {% extends "base.html" %}
 {% set active_page = "stats" %}
 
-{% block title %}Statistics — AZ-500{% endblock %}
+{% block title %}Statistics — {% if page_scope == 'active' and shell and shell.resolved_cert %}{{ shell.resolved_cert.exam_code }}{% else %}All Certifications{% endif %}{% endblock %}
 
 {% block content %}
-<div style="max-width: 840px; margin: 0 auto;">
+<div id="stats-page" data-scope="{{ page_scope }}" style="max-width: 840px; margin: 0 auto;">
 
     <!-- Header -->
-    <div class="page-header">
-        <h1 class="page-title" data-i18n="stats.title">Performance Statistics</h1>
-        <p class="page-subtitle" id="stats-subtitle" data-i18n="stats.subtitle">Track your progress across all domains</p>
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+        <div>
+            <h1 class="page-title" data-i18n="stats.title">Performance Statistics</h1>
+            <p class="page-subtitle" id="stats-subtitle">Track your progress across all domains</p>
+            <p class="page-subtitle" id="stats-scope-note" style="font-size: 12px; margin-top: 6px;"></p>
+        </div>
+        <div style="display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+            <a href="{{ scope_active_href }}" class="btn {{ 'btn-primary' if page_scope == 'active' else 'btn-outline' }}" data-i18n="stats.scope_active">This Certification</a>
+            <a href="{{ scope_all_href }}" class="btn {{ 'btn-primary' if page_scope == 'all' else 'btn-outline' }}" data-i18n="stats.scope_all">All Certifications</a>
+        </div>
     </div>
 
     <!-- Summary Cards -->
@@ -24,11 +31,11 @@
         </div>
         <div class="card" style="padding: 20px; text-align: center;">
             <div style="font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--c-warning);" id="stat-streak">—</div>
-            <div style="font-size: 12px; color: var(--c-text-muted); margin-top: 4px;" data-i18n="stats.day_streak">Day Streak</div>
+            <div style="font-size: 12px; color: var(--c-text-muted); margin-top: 4px;" id="stat-label-streak" data-i18n="stats.day_streak">Day Streak</div>
         </div>
         <div class="card" style="padding: 20px; text-align: center;">
             <div style="font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--c-accent);" id="stat-study-days">—</div>
-            <div style="font-size: 12px; color: var(--c-text-muted); margin-top: 4px;" data-i18n="stats.study_days">Study Days</div>
+            <div style="font-size: 12px; color: var(--c-text-muted); margin-top: 4px;" id="stat-label-study-days" data-i18n="stats.study_days">Study Days</div>
         </div>
     </div>
 
@@ -76,5 +83,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="/static/js/stats.js?v=23"></script>
+<script src="/static/js/stats.js?v=25"></script>
 {% endblock %}

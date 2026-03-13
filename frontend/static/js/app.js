@@ -66,6 +66,14 @@ const API = {
     async post(url, data) { return api(url.replace('/api', ''), { method: 'POST', body: data }); }
 };
 
+function getActiveCertificationCode() {
+    return document.body?.dataset?.certificationCode || '';
+}
+
+function getActiveCertificationSlug() {
+    return document.body?.dataset?.certificationSlug || '';
+}
+
 
 // ── Navigation helpers ─────────────────────────
 async function startMockExam() {
@@ -73,9 +81,9 @@ async function startMockExam() {
     try {
         const data = await api('/exam/start', {
             method: 'POST',
-            body: { mode: 'mock_exam', num_questions: 60 },
+            body: { mode: 'mock_exam', num_questions: 60, certification_code: getActiveCertificationCode() },
         });
-        if (data) window.location.href = `/exam/${data.session_id}`;
+        if (data) window.location.href = `/mock-exams/session/${data.session_id}`;
     } catch (e) {
         alert((t('common.failed_to_start_mock') || 'Failed to start mock exam: ') + e.message);
     }
@@ -83,13 +91,13 @@ async function startMockExam() {
 
 async function startLearning(mode = 'learning', domainId = null) {
     try {
-        const body = { mode };
+        const body = { mode, certification_code: getActiveCertificationCode() };
         if (domainId) body.domain_id = domainId;
         const data = await api('/exam/start', {
             method: 'POST',
             body,
         });
-        if (data) window.location.href = `/learning/${data.session_id}`;
+        if (data) window.location.href = `/learn/session/${data.session_id}`;
     } catch (e) {
         alert((t('common.failed_to_start') || 'Failed to start: ') + e.message);
     }
@@ -99,9 +107,9 @@ async function startReviewSession() {
     try {
         const data = await api('/exam/start', {
             method: 'POST',
-            body: { mode: 'review_pool' },
+            body: { mode: 'review_pool', certification_code: getActiveCertificationCode() },
         });
-        if (data) window.location.href = `/learning/${data.session_id}`;
+        if (data) window.location.href = `/learn/session/${data.session_id}`;
     } catch (e) {
         alert((t('common.failed_to_start_review') || 'Failed to start review: ') + e.message);
     }
@@ -347,7 +355,9 @@ function buildTable(lines) {
 // ── Review badge ───────────────────────────────
 async function updateReviewBadge() {
     try {
-        const data = await api('/analytics/review-pool');
+        const certificationCode = getActiveCertificationCode();
+        const suffix = certificationCode ? `?certification_code=${encodeURIComponent(certificationCode)}` : '';
+        const data = await api('/analytics/review-pool' + suffix);
         const badge = document.getElementById('review-badge');
         if (badge && data && data.total > 0) {
             badge.textContent = data.total;

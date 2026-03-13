@@ -70,7 +70,7 @@ async function loadQuestion(index) {
     if (!data) return;
     if (data._expired) {
         alert('Session expired.');
-        window.location.href = '/';
+        window.location.href = '/dashboard';
         return;
     }
 
@@ -1033,7 +1033,7 @@ async function finishSession() {
     if (!confirm(t('exam.finish_confirm') || 'Finish this learning session?')) return;
     var result = await api('/exam/' + SESSION_ID + '/complete', { method: 'POST' });
     if (result) {
-        window.location.href = '/results/' + SESSION_ID;
+        window.location.href = '/mock-exams/results/' + SESSION_ID;
     }
 }
 

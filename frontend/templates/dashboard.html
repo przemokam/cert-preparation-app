@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% set active_page = "dashboard" %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard{% if shell and shell.resolved_cert %} — {{ shell.resolved_cert.exam_code }}{% endif %}{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <h1 class="page-title" data-i18n="dashboard.welcome">Welcome back</h1>
-    <p class="page-subtitle" id="greeting-subtitle" data-i18n="dashboard.subtitle">Let's continue your AZ-500 preparation</p>
+    <p class="page-subtitle" id="greeting-subtitle">{% if shell and shell.resolved_cert %}{{ shell.resolved_cert.exam_code }} preparation at a glance{% else %}Certification preparation at a glance{% endif %}</p>
 </div>
 
 <!-- Resume Session Banner (hidden by default) -->
@@ -91,7 +91,7 @@
 
 <!-- Quick Actions -->
 <div class="quick-actions">
-    <button class="quick-action" onclick="startLearning()">
+    <button class="quick-action" onclick="startLearning()" id="qa-learn">
         <div class="qa-icon learn">
             <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.968 7.968 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
@@ -102,7 +102,7 @@
             <div class="qa-desc" data-i18n="dashboard.continue_learning_desc">Study all questions with feedback</div>
         </div>
     </button>
-    <button class="quick-action" onclick="startMockExam()">
+    <button class="quick-action" onclick="startMockExam()" id="qa-mock">
         <div class="qa-icon exam">
             <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
@@ -113,7 +113,7 @@
             <div class="qa-desc" data-i18n="dashboard.mock_exam_desc">60 questions, 150 min, real conditions</div>
         </div>
     </button>
-    <button class="quick-action" onclick="startLearning('weak_spots')">
+    <button class="quick-action" onclick="startLearning('weak_spots')" id="qa-weak">
         <div class="qa-icon weak">
             <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
@@ -124,7 +124,7 @@
             <div class="qa-desc" data-i18n="dashboard.weak_spots_desc">Practice low-scoring areas</div>
         </div>
     </button>
-    <button class="quick-action" onclick="startLearning('spaced_review')">
+    <button class="quick-action" onclick="startLearning('spaced_review')" id="qa-review">
         <div class="qa-icon review">
             <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />

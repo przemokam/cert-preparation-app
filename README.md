@@ -8,7 +8,7 @@ Student-ready AZ-500 exam practice app with a prebuilt local database.
 - bundled SQLite database (`az500_dev.db`) — **no markdown import required**
 - FastAPI backend + Jinja/vanilla JS frontend
 - bundled study-plan markdown sources for day pages and cheatsheet
-- learning mode, mock exam, review pool, analytics, bilingual UI, and theme toggle
+- certification hub, learning mode, mock exams, study plan, materials, review, analytics, bilingual UI, and theme toggle
 
 ## Quick start
 
@@ -27,8 +27,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-The example file already contains safe local defaults for running the app on your machine.
-On first start, the app creates a private working database `az500_local.db` from the bundled `az500_dev.db` seed, so your local progress is not written into tracked git files.
+The example file already contains safe local defaults for running the app on your machine.On first start, the app creates a private working database `az500_local.db` from the bundled `az500_dev.db` seed, so your local progress is not written into tracked git files.
 
 ### 3. Start the app
 
@@ -66,12 +65,23 @@ Notes:
 
 ### One-time migration for older installs
 
-If your existing local copy was created before this change, your app may still have written progress into the tracked `az500_dev.db` file. In that case, run this once before pulling:
+If your existing local copy was created before this change, your app may still have written progress into the tracked `az500_dev.db` file. In that case, stop the server and run this once before pulling:
 
 ```bash
 git checkout -- az500_dev.db
 git pull origin main
 ```
+
+Then restart the app from the `cert-preparation-app` directory. After the first restart, refresh the local dev session once by opening:
+
+```bash
+http://localhost:8000/logout
+http://localhost:8000/dev-login
+```
+
+This recreates the local development user in the working database if your old session cookie still points at a user record from the pre-migration database state.
+
+Use `git checkout -- az500_dev.db` only for this one-time migration of older installs. For normal local progress resets, delete `az500_local.db` instead.
 
 ## Important note
 
@@ -105,10 +115,14 @@ cert-preparation-app/
 ## Included app areas
 
 - Dashboard
+- Certification Hub
 - Learning mode
-- Mock exam
-- Review pool
+- Mock exams
+- Study plan
+- Materials
+- Review
 - Statistics
+- Review and Statistics can switch between the active certification and an all-certifications view when appropriate.
 - Frontend translations (`EN` / `DE`)
 
 ## Troubleshooting
@@ -122,3 +136,13 @@ cert-preparation-app/
 ### Database was modified during local study
 
 The app stores your local study progress in `az500_local.db`. If you want to reset your local progress, delete `az500_local.db` and restart the app.
+
+### Learning / Study button returns 404 after an update
+
+If the page opens but clicking `Study` or starting a session fails after a local update, your browser may still have an old session cookie while the app is now using a rebuilt local database.
+
+- Open `http://localhost:8000/logout`
+- Then open `http://localhost:8000/dev-login`
+- Refresh the page and try again
+
+This recreates the local development user in `az500_local.db` and fixes the usual `POST /api/exam/start` → `404` case after migrating an older install.

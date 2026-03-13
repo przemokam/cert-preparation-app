@@ -67,6 +67,14 @@ class StartExamRequest(BaseModel):
     mode: str  # learning | learning_domain | mock_exam | review_pool | weak_spots | spaced_review
     domain_id: Optional[int] = None
     num_questions: int = 60
+    certification_code: Optional[str] = None
+
+
+def _resolve_requested_certification(db: Session, certification_code: Optional[str]) -> Optional[Certification]:
+    target_code = (certification_code or "").strip().upper()
+    if not target_code:
+        return None
+    return db.query(Certification).filter(Certification.code == target_code).first()
 
 
 class SubmitAnswerRequest(BaseModel):
@@ -91,6 +99,10 @@ async def start_exam(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    cert = _resolve_requested_certification(db, body.certification_code or "AZ-500")
+    if not cert:
+        raise HTTPException(status_code=404, detail="This certification is not ready yet")
+
     now = _utcnow()
     question_ids = []
 
@@ -98,7 +110,7 @@ async def start_exam(
         # All active questions sorted by source number
         questions = (
             db.query(Question)
-            .filter(Question.is_active == True)
+            .filter(Question.is_active == True, Question.certification_id == cert.id)
             .order_by(Question.source_question_number)
             .all()
         )
@@ -110,7 +122,11 @@ async def start_exam(
         questions = (
             db.query(Question)
             .join(QuestionSkill).join(Skill)
-            .filter(Question.is_active == True, Skill.domain_id == body.domain_id)
+            .filter(
+                Question.is_active == True,
+                Question.certification_id == cert.id,
+                Skill.domain_id == body.domain_id,
+            )
             .order_by(Question.source_question_number)
             .all()
         )
@@ -119,13 +135,15 @@ async def start_exam(
     elif body.mode == "review_pool":
         review_qids = (
             db.query(ReviewPoolItem.question_id)
+            .join(Question, ReviewPoolItem.question_id == Question.id)
             .filter(ReviewPoolItem.user_id == user.id, ReviewPoolItem.resolved == False)
+            .filter(Question.certification_id == cert.id)
             .all()
         )
         qids = [r[0] for r in review_qids]
         questions = (
             db.query(Question)
-            .filter(Question.id.in_(qids), Question.is_active == True)
+            .filter(Question.id.in_(qids), Question.is_active == True, Question.certification_id == cert.id)
             .order_by(Question.source_question_number)
             .all()
         )
@@ -133,10 +151,10 @@ async def start_exam(
 
     elif body.mode == "weak_spots":
         # Questions from domains where accuracy < 70%
-        weak_qids = _get_weak_question_ids(user.id, db)
+        weak_qids = _get_weak_question_ids(user.id, db, cert.id)
         questions = (
             db.query(Question)
-            .filter(Question.id.in_(weak_qids), Question.is_active == True)
+            .filter(Question.id.in_(weak_qids), Question.is_active == True, Question.certification_id == cert.id)
             .order_by(Question.source_question_number)
             .all()
         )
@@ -146,24 +164,26 @@ async def start_exam(
         # Questions due for review based on Leitner schedule
         due = (
             db.query(QuestionMastery.question_id)
+            .join(Question, QuestionMastery.question_id == Question.id)
             .filter(
                 QuestionMastery.user_id == user.id,
                 QuestionMastery.box > 0,
                 QuestionMastery.next_review_at <= now,
+                Question.certification_id == cert.id,
             )
             .all()
         )
         qids = [r[0] for r in due]
         questions = (
             db.query(Question)
-            .filter(Question.id.in_(qids), Question.is_active == True)
+            .filter(Question.id.in_(qids), Question.is_active == True, Question.certification_id == cert.id)
             .order_by(Question.source_question_number)
             .all()
         )
         question_ids = [q.id for q in questions]
 
     elif body.mode == "mock_exam":
-        question_ids = _build_mock_exam(body.num_questions, db)
+        question_ids = _build_mock_exam(body.num_questions, db, cert.id)
 
     else:
         raise HTTPException(status_code=400, detail=f"Unknown mode: {body.mode}")
@@ -172,7 +192,6 @@ async def start_exam(
         raise HTTPException(status_code=404, detail="No questions available for this mode")
 
     # Use real exam duration for mock, no deadline for learning modes
-    cert = db.query(Certification).filter(Certification.code == "AZ-500").first()
     duration = cert.duration_minutes if cert else 150
     deadline = now + timedelta(minutes=duration) if body.mode == "mock_exam" else None
 
@@ -197,16 +216,20 @@ async def start_exam(
     }
 
 
-def _build_mock_exam(num_questions: int, db: Session) -> list[int]:
-    """Build mock exam: 1 random case study section + mixed questions from Topic 5."""
+def _build_mock_exam(num_questions: int, db: Session, certification_id: int) -> list[int]:
+    """Build a certification-scoped mock exam session."""
     # Pick a random case study
-    case_studies = db.query(CaseStudy).all()
+    case_studies = db.query(CaseStudy).filter(CaseStudy.certification_id == certification_id).all()
     section1_ids = []
     if case_studies:
         cs = random.choice(case_studies)
         cs_questions = (
             db.query(Question)
-            .filter(Question.case_study_id == cs.id, Question.is_active == True)
+            .filter(
+                Question.case_study_id == cs.id,
+                Question.is_active == True,
+                Question.certification_id == certification_id,
+            )
             .order_by(Question.source_question_number)
             .all()
         )
@@ -220,6 +243,7 @@ def _build_mock_exam(num_questions: int, db: Session) -> list[int]:
         .filter(
             Question.case_study_id == None,
             Question.is_active == True,
+            Question.certification_id == certification_id,
             ~Question.id.in_(section1_ids) if section1_ids else True,
         )
         .all()
@@ -227,7 +251,7 @@ def _build_mock_exam(num_questions: int, db: Session) -> list[int]:
     mixed_pool = [q for q in mixed_pool if not _is_placeholder_question(q)]
 
     # Weight by domain
-    domains = db.query(Domain).all()
+    domains = db.query(Domain).filter(Domain.certification_id == certification_id).all()
     section2_ids = []
     for domain in domains:
         weight = (domain.weight_min + domain.weight_max) / 2 / 100
@@ -246,9 +270,9 @@ def _build_mock_exam(num_questions: int, db: Session) -> list[int]:
     return section1_ids + section2_ids
 
 
-def _get_weak_question_ids(user_id: str, db: Session) -> list[int]:
+def _get_weak_question_ids(user_id: str, db: Session, certification_id: int) -> list[int]:
     """Get question IDs from domains where user accuracy < 70%."""
-    domains = db.query(Domain).all()
+    domains = db.query(Domain).filter(Domain.certification_id == certification_id).all()
     weak_qids = []
     for domain in domains:
         answers = (
@@ -257,7 +281,11 @@ def _get_weak_question_ids(user_id: str, db: Session) -> list[int]:
             .join(Question, UserAnswer.question_id == Question.id)
             .join(QuestionSkill, Question.id == QuestionSkill.question_id)
             .join(Skill, QuestionSkill.skill_id == Skill.id)
-            .filter(ExamSession.user_id == user_id, Skill.domain_id == domain.id)
+            .filter(
+                ExamSession.user_id == user_id,
+                Skill.domain_id == domain.id,
+                Question.certification_id == certification_id,
+            )
             .all()
         )
         if not answers:
@@ -267,7 +295,11 @@ def _get_weak_question_ids(user_id: str, db: Session) -> list[int]:
             domain_questions = (
                 db.query(Question.id)
                 .join(QuestionSkill).join(Skill)
-                .filter(Skill.domain_id == domain.id, Question.is_active == True)
+                .filter(
+                    Skill.domain_id == domain.id,
+                    Question.is_active == True,
+                    Question.certification_id == certification_id,
+                )
                 .all()
             )
             weak_qids.extend(r[0] for r in domain_questions)
@@ -717,19 +749,25 @@ def _check_answer(correct: dict, user_response: dict) -> bool:
 
 @router.get("/resume")
 async def resume_session(
+    certification_code: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Find the user's most recent in-progress session."""
-    session = (
-        db.query(ExamSession)
-        .filter(
-            ExamSession.user_id == current_user["sub"],
-            ExamSession.status == "in_progress",
-        )
-        .order_by(ExamSession.started_at.desc())
-        .first()
+    cert = None
+    if certification_code:
+        cert = db.query(Certification).filter(Certification.code == certification_code.strip().upper()).first()
+        if not cert:
+            return {"has_active_session": False}
+
+    query = db.query(ExamSession).filter(
+        ExamSession.user_id == current_user["sub"],
+        ExamSession.status == "in_progress",
     )
+    if cert:
+        query = query.filter(ExamSession.certification_id == cert.id)
+
+    session = query.order_by(ExamSession.started_at.desc()).first()
 
     if not session:
         return {"has_active_session": False}
@@ -763,20 +801,37 @@ async def resume_session(
 
 @router.get("/history")
 async def exam_history(
+    certification_code: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Full exam history with readiness score."""
-    completed_exams = (
+    cert = _resolve_requested_certification(db, certification_code)
+    invalid_cert = bool(certification_code and not cert)
+
+    if invalid_cert:
+        return {
+            "history": [],
+            "total_exams": 0,
+            "readiness": {
+                "score": 0,
+                "status": "not_started",
+                "exams_passed": 0,
+                "exams_total": 0,
+            },
+        }
+
+    completed_query = (
         db.query(ExamSession)
         .filter(
             ExamSession.user_id == current_user["sub"],
             ExamSession.status.in_(["completed", "expired"]),
         )
         .order_by(ExamSession.completed_at.desc())
-        .limit(20)
-        .all()
     )
+    if cert:
+        completed_query = completed_query.filter(ExamSession.certification_id == cert.id)
+    completed_exams = completed_query.limit(20).all()
 
     history = []
     for exam in completed_exams:
@@ -794,6 +849,7 @@ async def exam_history(
             "started_at": exam.started_at.isoformat(),
             "completed_at": exam.completed_at.isoformat() if exam.completed_at else None,
             "status": exam.status,
+            "certification_code": exam.certification.code if exam.certification else None,
         })
 
     # Readiness from mock exams only

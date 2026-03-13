@@ -79,7 +79,7 @@ async function loadQuestion(index) {
     if (!data) return;
     if (data._expired) {
         alert('Time expired! Your exam has been submitted.');
-        window.location.href = '/results/' + SESSION_ID;
+        window.location.href = '/mock-exams/results/' + SESSION_ID;
         return;
     }
 
@@ -552,7 +552,7 @@ async function submitExam() {
     var result = await api('/exam/' + SESSION_ID + '/complete', { method: 'POST' });
     if (result) {
         clearInterval(timerInterval);
-        window.location.href = '/results/' + SESSION_ID;
+        window.location.href = '/mock-exams/results/' + SESSION_ID;
     }
 }
 

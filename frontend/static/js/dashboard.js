@@ -4,16 +4,20 @@
  */
 
 let _resumeSessionId = null;
+let _resumeMode = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    const certificationCode = getActiveCertificationCode();
+    const query = certificationCode ? `?certification_code=${encodeURIComponent(certificationCode)}` : '';
     const [dashData, resumeData] = await Promise.all([
-        api('/analytics/dashboard').catch(() => null),
-        api('/exam/resume').catch(() => null),
+        api(`/analytics/dashboard${query}`).catch(() => null),
+        api(`/exam/resume${query}`).catch(() => null),
     ]);
 
     // ── Resume banner ──
     if (resumeData?.has_active_session) {
         _resumeSessionId = resumeData.session_id;
+        _resumeMode = resumeData.mode;
         const banner = document.getElementById('resume-banner');
         banner.style.display = 'block';
 
@@ -34,10 +38,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('due-reviews').textContent = dashData.due_reviews;
     document.getElementById('review-due-count').textContent = dashData.due_reviews;
     document.getElementById('total-questions-badge').textContent = t('dashboard.questions_label', { count: dashData.total_questions }) || (dashData.total_questions + ' questions');
+    setCertificationActionsEnabled(dashData.total_questions > 0);
 
     renderDomains(dashData.domains);
     renderRecentSessions(dashData.recent_sessions);
 });
+
+function setCertificationActionsEnabled(enabled) {
+    ['qa-learn', 'qa-mock', 'qa-weak', 'qa-review'].forEach(id => {
+        const button = document.getElementById(id);
+        if (!button) return;
+        button.disabled = !enabled;
+        button.title = enabled ? '' : 'No certification content available yet';
+    });
+}
 
 
 // ── Readiness Gauge ──────────────────────────────
@@ -201,7 +215,7 @@ function renderRecentSessions(sessions) {
         const barColor = scorePct >= 70 ? 'var(--c-success)' : scorePct >= 50 ? 'var(--c-warning)' : 'var(--c-danger)';
 
         if (isExam) {
-            row.onclick = () => { window.location.href = '/results/' + s.session_id; };
+            row.onclick = () => { window.location.href = '/mock-exams/results/' + s.session_id; };
         } else {
             row.style.cursor = 'default';
         }
@@ -244,11 +258,10 @@ function renderRecentSessions(sessions) {
 
 function resumeSession() {
     if (!_resumeSessionId) return;
-    const detail = document.getElementById('resume-detail').textContent;
-    if (detail.includes('Mock Exam')) {
-        window.location.href = '/exam/' + _resumeSessionId;
+    if (_resumeMode === 'mock_exam') {
+        window.location.href = '/mock-exams/session/' + _resumeSessionId;
     } else {
-        window.location.href = '/learning/' + _resumeSessionId;
+        window.location.href = '/learn/session/' + _resumeSessionId;
     }
 }
 

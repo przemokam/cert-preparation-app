@@ -10,6 +10,7 @@ from sqlalchemy import func, Integer
 from backend.database import get_db
 from backend.auth import get_current_user
 from backend.models import (
+    Certification,
     UserAnswer, ExamSession, Question, QuestionSkill, Skill, Domain,
     ReviewPoolItem, User, QuestionMastery, StudyStreak, StudyProgress
 )
@@ -22,16 +23,45 @@ def _utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _resolve_requested_certification(db: Session, certification_code: str | None):
+    if not certification_code:
+        return None
+    return db.query(Certification).filter(Certification.code == certification_code.strip().upper()).first()
+
+
+def _progress_section_storage_key(section: str, certification_code: str | None) -> str:
+    return f"{certification_code}::{section}" if certification_code else section
+
+
+def _progress_section_match(stored_section: str, certification_code: str | None) -> str | None:
+    if certification_code:
+        prefix = f"{certification_code}::"
+        if stored_section.startswith(prefix):
+            return stored_section[len(prefix):]
+        if certification_code == "AZ-500" and "::" not in stored_section:
+            return stored_section
+        return None
+    if "::" in stored_section:
+        return None
+    return stored_section
+
+
 @router.get("/dashboard")
 async def get_dashboard(
+    certification_code: str | None = None,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Combined dashboard data: mastery, streak, recent sessions, due reviews."""
     user_id = current_user["sub"]
+    cert = _resolve_requested_certification(db, certification_code)
+    invalid_cert = bool(certification_code and not cert)
 
     # Mastery per domain
-    domains = db.query(Domain).all()
+    domains_query = db.query(Domain)
+    if cert:
+        domains_query = domains_query.filter(Domain.certification_id == cert.id)
+    domains = [] if invalid_cert else domains_query.all()
     domain_mastery = []
     total_mastered = 0
     total_questions = 0
@@ -41,7 +71,11 @@ async def get_dashboard(
         q_count = (
             db.query(Question.id)
             .join(QuestionSkill).join(Skill)
-            .filter(Skill.domain_id == domain.id, Question.is_active == True)
+            .filter(
+                Skill.domain_id == domain.id,
+                Question.is_active == True,
+                Question.certification_id == cert.id if cert else True,
+            )
             .count()
         )
         # Count mastery levels
@@ -50,7 +84,11 @@ async def get_dashboard(
             .join(Question, QuestionMastery.question_id == Question.id)
             .join(QuestionSkill, Question.id == QuestionSkill.question_id)
             .join(Skill, QuestionSkill.skill_id == Skill.id)
-            .filter(QuestionMastery.user_id == user_id, Skill.domain_id == domain.id)
+            .filter(
+                QuestionMastery.user_id == user_id,
+                Skill.domain_id == domain.id,
+                Question.certification_id == cert.id if cert else True,
+            )
             .group_by(QuestionMastery.box)
             .all()
         )
@@ -102,6 +140,18 @@ async def get_dashboard(
         "total_days": streak.total_study_days if streak else 0,
     }
 
+    if invalid_cert:
+        return {
+            "readiness": 0,
+            "total_questions": 0,
+            "streak": streak_data,
+            "today_answered": 0,
+            "due_reviews": 0,
+            "review_pool_count": 0,
+            "domains": [],
+            "recent_sessions": [],
+        }
+
     # Today's progress
     from datetime import date
     today_start = datetime.combine(date.today(), datetime.min.time())
@@ -111,6 +161,7 @@ async def get_dashboard(
         .filter(
             ExamSession.user_id == user_id,
             UserAnswer.session_id == ExamSession.id,
+            ExamSession.certification_id == cert.id if cert else True,
         )
         .count()
     )
@@ -119,10 +170,12 @@ async def get_dashboard(
     now = _utcnow()
     due_count = (
         db.query(QuestionMastery)
+        .join(Question, QuestionMastery.question_id == Question.id)
         .filter(
             QuestionMastery.user_id == user_id,
             QuestionMastery.box > 0,
             QuestionMastery.next_review_at <= now,
+            Question.certification_id == cert.id if cert else True,
         )
         .count()
     )
@@ -133,6 +186,7 @@ async def get_dashboard(
         .filter(
             ExamSession.user_id == user_id,
             ExamSession.status.in_(["completed", "expired"]),
+            ExamSession.certification_id == cert.id if cert else True,
         )
         .order_by(ExamSession.completed_at.desc())
         .limit(5)
@@ -155,7 +209,12 @@ async def get_dashboard(
     # Review pool count
     review_count = (
         db.query(ReviewPoolItem)
-        .filter(ReviewPoolItem.user_id == user_id, ReviewPoolItem.resolved == False)
+        .join(Question, ReviewPoolItem.question_id == Question.id)
+        .filter(
+            ReviewPoolItem.user_id == user_id,
+            ReviewPoolItem.resolved == False,
+            Question.certification_id == cert.id if cert else True,
+        )
         .count()
     )
 
@@ -173,12 +232,18 @@ async def get_dashboard(
 
 @router.get("/mastery")
 async def get_mastery(
+    certification_code: str | None = None,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Detailed mastery data per domain based on Leitner boxes."""
     user_id = current_user["sub"]
-    domains = db.query(Domain).all()
+    cert = _resolve_requested_certification(db, certification_code)
+    invalid_cert = bool(certification_code and not cert)
+    domains_query = db.query(Domain)
+    if cert:
+        domains_query = domains_query.filter(Domain.certification_id == cert.id)
+    domains = [] if invalid_cert else domains_query.all()
     result = []
 
     for domain in domains:
@@ -187,7 +252,11 @@ async def get_mastery(
             .join(Question, QuestionMastery.question_id == Question.id)
             .join(QuestionSkill, Question.id == QuestionSkill.question_id)
             .join(Skill, QuestionSkill.skill_id == Skill.id)
-            .filter(QuestionMastery.user_id == user_id, Skill.domain_id == domain.id)
+            .filter(
+                QuestionMastery.user_id == user_id,
+                Skill.domain_id == domain.id,
+                Question.certification_id == cert.id if cert else True,
+            )
             .all()
         )
         boxes = [0, 0, 0, 0, 0, 0]  # box 0-5
@@ -197,7 +266,11 @@ async def get_mastery(
         q_count = (
             db.query(Question.id)
             .join(QuestionSkill).join(Skill)
-            .filter(Skill.domain_id == domain.id, Question.is_active == True)
+            .filter(
+                Skill.domain_id == domain.id,
+                Question.is_active == True,
+                Question.certification_id == cert.id if cert else True,
+            )
             .count()
         )
         boxes[0] = q_count - sum(boxes[1:])  # unseen = total - tracked
@@ -205,6 +278,7 @@ async def get_mastery(
         result.append({
             "domain_id": domain.id,
             "domain_name": domain.name,
+            "certification_code": domain.certification.code if domain.certification else None,
             "total": q_count,
             "boxes": boxes,  # [unseen, new/wrong, shaky, learning, known, mastered]
         })
@@ -250,21 +324,38 @@ async def get_due_reviews(
 
 @router.get("/stats")
 async def get_stats(
+    certification_code: str | None = None,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Overall user statistics."""
     user_id = current_user["sub"]
+    cert = _resolve_requested_certification(db, certification_code)
+    invalid_cert = bool(certification_code and not cert)
+
+    if invalid_cert:
+        return {
+            "total_answered": 0,
+            "total_correct": 0,
+            "accuracy": 0,
+            "domains": [],
+        }
 
     total_answered = db.query(UserAnswer).join(ExamSession).filter(
-        ExamSession.user_id == user_id
+        ExamSession.user_id == user_id,
+        ExamSession.certification_id == cert.id if cert else True,
     ).count()
 
     total_correct = db.query(UserAnswer).join(ExamSession).filter(
-        ExamSession.user_id == user_id, UserAnswer.is_correct == True
+        ExamSession.user_id == user_id,
+        UserAnswer.is_correct == True,
+        ExamSession.certification_id == cert.id if cert else True,
     ).count()
 
-    domains = db.query(Domain).all()
+    domains_query = db.query(Domain)
+    if cert:
+        domains_query = domains_query.filter(Domain.certification_id == cert.id)
+    domains = domains_query.all()
     domain_stats = []
     for domain in domains:
         domain_answers = (
@@ -273,7 +364,11 @@ async def get_stats(
             .join(Question, UserAnswer.question_id == Question.id)
             .join(QuestionSkill, Question.id == QuestionSkill.question_id)
             .join(Skill, QuestionSkill.skill_id == Skill.id)
-            .filter(ExamSession.user_id == user_id, Skill.domain_id == domain.id)
+            .filter(
+                ExamSession.user_id == user_id,
+                Skill.domain_id == domain.id,
+                Question.certification_id == cert.id if cert else True,
+            )
             .all()
         )
         domain_total = len(domain_answers)
@@ -281,6 +376,7 @@ async def get_stats(
         domain_stats.append({
             "domain_id": domain.id,
             "domain_name": domain.name,
+            "certification_code": domain.certification.code if domain.certification else None,
             "total": domain_total,
             "correct": domain_correct,
             "percentage": round((domain_correct / domain_total * 100)) if domain_total > 0 else 0,
@@ -298,11 +394,17 @@ async def get_stats(
 
 @router.get("/weak-spots")
 async def get_weak_spots(
+    certification_code: str | None = None,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Identify the weakest skills for targeted review."""
     user_id = current_user["sub"]
+    cert = _resolve_requested_certification(db, certification_code)
+    invalid_cert = bool(certification_code and not cert)
+
+    if invalid_cert:
+        return {"weak_spots": []}
 
     skill_errors = (
         db.query(
@@ -311,6 +413,7 @@ async def get_weak_spots(
             Skill.name,
             Domain.id.label("domain_id"),
             Domain.name.label("domain_name"),
+            Certification.code.label("certification_code"),
             func.count(UserAnswer.id).label("total"),
             func.sum(func.cast(UserAnswer.is_correct == False, Integer)).label("errors"),
         )
@@ -319,7 +422,11 @@ async def get_weak_spots(
         .join(UserAnswer, Question.id == UserAnswer.question_id)
         .join(ExamSession, UserAnswer.session_id == ExamSession.id)
         .join(Domain, Skill.domain_id == Domain.id)
-        .filter(ExamSession.user_id == user_id)
+        .join(Certification, Domain.certification_id == Certification.id)
+        .filter(
+            ExamSession.user_id == user_id,
+            Question.certification_id == cert.id if cert else True,
+        )
         .group_by(Skill.id)
         .all()
     )
@@ -334,6 +441,7 @@ async def get_weak_spots(
                 "skill_name": row.name,
                 "domain_id": row.domain_id,
                 "domain": row.domain_name,
+                "certification_code": row.certification_code,
                 "total_attempts": row.total,
                 "errors": row.errors,
                 "error_rate": round(error_rate),
@@ -345,13 +453,25 @@ async def get_weak_spots(
 
 @router.get("/review-pool")
 async def get_review_pool(
+    certification_code: str | None = None,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get user's review pool items."""
+    cert = _resolve_requested_certification(db, certification_code)
+    invalid_cert = bool(certification_code and not cert)
+
+    if invalid_cert:
+        return {"items": [], "total": 0}
+
     items = (
         db.query(ReviewPoolItem)
-        .filter(ReviewPoolItem.user_id == current_user["sub"], ReviewPoolItem.resolved == False)
+        .join(Question, ReviewPoolItem.question_id == Question.id)
+        .filter(
+            ReviewPoolItem.user_id == current_user["sub"],
+            ReviewPoolItem.resolved == False,
+            Question.certification_id == cert.id if cert else True,
+        )
         .order_by(ReviewPoolItem.times_failed.desc())
         .all()
     )
@@ -364,6 +484,8 @@ async def get_review_pool(
                 "times_failed": item.times_failed,
                 "note": item.note,
                 "added_at": item.added_at.isoformat(),
+                "certification_code": item.question.certification.code if item.question and item.question.certification else None,
+                "certification_name": item.question.certification.name if item.question and item.question.certification else None,
             }
             for item in items
         ],
@@ -442,6 +564,7 @@ async def resolve_review_item(
 
 @router.get("/study-plan/progress")
 async def get_study_progress(
+    certification_code: str | None = None,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -453,7 +576,13 @@ async def get_study_progress(
     )
     progress = {}
     for item in items:
-        key = f"{item.day}_{item.section}"
+        normalized_section = _progress_section_match(
+            item.section,
+            certification_code.strip().upper() if certification_code else None,
+        )
+        if not normalized_section:
+            continue
+        key = f"{item.day}_{normalized_section}"
         progress[key] = {
             "completed": item.completed,
             "completed_at": item.completed_at.isoformat() if item.completed_at else None,
@@ -470,15 +599,23 @@ async def toggle_study_section(
     """Toggle completion of a study plan section."""
     day = body.get("day")
     section = body.get("section")
+    certification_code = body.get("certification_code")
+    if certification_code:
+        certification_code = str(certification_code).strip().upper()
     if not day or not section:
         raise HTTPException(status_code=400, detail="day and section required")
+
+    storage_section = _progress_section_storage_key(section, certification_code)
+    lookup_sections = [storage_section]
+    if certification_code == "AZ-500":
+        lookup_sections.append(section)
 
     existing = (
         db.query(StudyProgress)
         .filter(
             StudyProgress.user_id == current_user["sub"],
             StudyProgress.day == day,
-            StudyProgress.section == section,
+            StudyProgress.section.in_(lookup_sections),
         )
         .first()
     )
@@ -490,7 +627,7 @@ async def toggle_study_section(
         existing = StudyProgress(
             user_id=current_user["sub"],
             day=day,
-            section=section,
+            section=storage_section,
             completed=True,
             completed_at=_utcnow(),
         )

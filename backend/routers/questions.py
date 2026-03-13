@@ -10,18 +10,28 @@ from typing import Optional
 
 from backend.database import get_db
 from backend.auth import get_current_user
-from backend.models import Question, QuestionTranslation, QuestionImage, QuestionSkill, Domain, Skill
+from backend.models import Certification, Question, QuestionTranslation, QuestionImage, QuestionSkill, Domain, Skill
 
 router = APIRouter()
 
 
 @router.get("/domains")
 async def list_domains(
+    certification_code: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
     """List all exam domains with question counts."""
-    domains = db.query(Domain).all()
+    cert = None
+    if certification_code:
+        cert = db.query(Certification).filter(Certification.code == certification_code.strip().upper()).first()
+        if not cert:
+            return []
+
+    domains_query = db.query(Domain)
+    if cert:
+        domains_query = domains_query.filter(Domain.certification_id == cert.id)
+    domains = domains_query.all()
     return [
         {
             "id": d.id,
@@ -30,7 +40,9 @@ async def list_domains(
             "weight_max": d.weight_max,
             "skill_count": len(d.skills),
             "question_count": db.query(Question).join(QuestionSkill).join(Skill).filter(
-                Skill.domain_id == d.id, Question.is_active == True
+                Skill.domain_id == d.id,
+                Question.is_active == True,
+                Question.certification_id == cert.id if cert else True,
             ).count(),
         }
         for d in domains
@@ -39,11 +51,21 @@ async def list_domains(
 
 @router.get("/count")
 async def question_count(
+    certification_code: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
     """Total number of active questions."""
-    total = db.query(Question).filter(Question.is_active == True).count()
+    cert = None
+    if certification_code:
+        cert = db.query(Certification).filter(Certification.code == certification_code.strip().upper()).first()
+        if not cert:
+            return {"total_active": 0}
+
+    total_query = db.query(Question).filter(Question.is_active == True)
+    if cert:
+        total_query = total_query.filter(Question.certification_id == cert.id)
+    total = total_query.count()
     return {"total_active": total}
 
 
@@ -52,6 +74,7 @@ async def list_questions(
     domain_id: Optional[int] = None,
     q_type: Optional[str] = None,
     search: Optional[str] = None,
+    certification_code: Optional[str] = None,
     limit: int = 30,
     offset: int = 0,
     db: Session = Depends(get_db),
@@ -60,8 +83,16 @@ async def list_questions(
     """List basic question metadata for the Learning Mode grid.
     Supports filtering by domain, question type, and free-text search.
     """
+    cert = None
+    if certification_code:
+        cert = db.query(Certification).filter(Certification.code == certification_code.strip().upper()).first()
+        if not cert:
+            return {"total": 0, "total_all": 0, "domain_counts": {}, "items": []}
+
     # Base query against translations for text access
     query = db.query(Question).filter(Question.is_active == True)
+    if cert:
+        query = query.filter(Question.certification_id == cert.id)
 
     if domain_id:
         query = query.join(QuestionSkill, isouter=False).join(Skill).filter(
@@ -79,13 +110,21 @@ async def list_questions(
     total = query.distinct().count()
 
     # Total unfiltered count for the "All" pill
-    total_all = db.query(Question).filter(Question.is_active == True).count()
+    total_all_query = db.query(Question).filter(Question.is_active == True)
+    if cert:
+        total_all_query = total_all_query.filter(Question.certification_id == cert.id)
+    total_all = total_all_query.count()
 
     # Per-domain counts (for pills)
-    domains = db.query(Domain).all()
+    domains_query = db.query(Domain)
+    if cert:
+        domains_query = domains_query.filter(Domain.certification_id == cert.id)
+    domains = domains_query.all()
     domain_counts = {}
     for d in domains:
         base = db.query(Question).filter(Question.is_active == True)
+        if cert:
+            base = base.filter(Question.certification_id == cert.id)
         if q_type:
             base = base.filter(Question.question_type == q_type)
         if search:

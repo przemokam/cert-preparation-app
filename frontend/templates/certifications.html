@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Certification Hub{% endblock %}
+
+{% block content %}
+<div style="max-width: 980px; margin: 0 auto;">
+    <div class="page-header">
+        <h1 class="page-title">Certification Hub</h1>
+        <p class="page-subtitle">Choose the certification context for shared learning, mock exams, study planning, and materials.</p>
+    </div>
+
+    {% if hub_reason == 'missing_cert' %}
+    <div class="card" style="margin-bottom: 20px; border-left: 3px solid var(--c-warning);">Select a certification to continue into scoped areas.</div>
+    {% elif hub_reason == 'invalid_cert' %}
+    <div class="card" style="margin-bottom: 20px; border-left: 3px solid var(--c-danger);">That certification is not available yet. Choose one of the supported options below.</div>
+    {% endif %}
+
+    <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+        {% for cert in certifications %}
+        <article class="card" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: flex-start;">
+                <div>
+                    <div class="badge badge-domain">{{ cert.exam_code }}</div>
+                    <h3 style="margin: 12px 0 6px; font-size: 18px;">{{ cert.title }}</h3>
+                    <p style="margin: 0; color: var(--c-text-muted); font-size: 13px;">{{ cert.vendor_name }} · {{ cert.level }}</p>
+                </div>
+                {% if cert.is_active %}<span class="badge">Active</span>{% endif %}
+            </div>
+            <p style="margin: 0; color: var(--c-text-secondary);">{{ cert.description }}</p>
+            {% if cert.is_published %}
+            <a href="{{ cert.select_href }}" class="btn btn-primary">{{ 'Continue' if cert.is_active else 'Select certification' }}</a>
+            {% else %}
+            <span class="btn btn-outline" style="pointer-events: none; opacity: 0.7;">Coming soon</span>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

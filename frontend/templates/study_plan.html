@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set active_page = "study_plan" %}
 
-{% block title %}Study Plan — AZ-500{% endblock %}
+{% block title %}Study Plan{% if shell and shell.resolved_cert %} — {{ shell.resolved_cert.exam_code }}{% endif %}{% endblock %}
 
 {% block content %}
 <div style="max-width: 860px; margin: 0 auto;">
@@ -9,19 +9,25 @@
     <!-- Header -->
     <div class="page-header">
         <h1 class="page-title" data-i18n="study_plan.title">7-Day Study Plan</h1>
-        <p class="page-subtitle" data-i18n="study_plan.subtitle">Structured preparation for AZ-500: Azure Security Technologies</p>
+        <p class="page-subtitle">Structured preparation for {% if shell and shell.resolved_cert %}{{ shell.resolved_cert.exam_code }} · {{ shell.resolved_cert.title }}{% else %}your selected certification{% endif %}</p>
     </div>
 
     <!-- Cheatsheet link -->
-    <a href="/study-plan/cheatsheet" class="card" style="padding: 16px 24px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px; text-decoration: none; border: 1px solid var(--c-primary); transition: background 0.15s;">
+    <a href="{{ materials_href }}" class="card" style="padding: 16px 24px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px; text-decoration: none; border: 1px solid var(--c-primary); transition: background 0.15s;">
         <div style="font-size: 24px; flex-shrink: 0;">&#128218;</div>
         <div style="flex: 1;">
-            <div style="font-size: 15px; font-weight: 600; color: var(--c-primary); margin-bottom: 2px;" data-i18n="study_plan.cheatsheet_title">AZ-500 Cheatsheet &amp; Glossary</div>
-            <div style="font-size: 12px; color: var(--c-text-muted);" data-i18n="study_plan.cheatsheet_desc">Exam traps, lab tracker, module tracker, quick reference links</div>
+            <div style="font-size: 15px; font-weight: 600; color: var(--c-primary); margin-bottom: 2px;">Materials &amp; cheatsheet</div>
+            <div style="font-size: 12px; color: var(--c-text-muted);">Open certification materials, day-by-day reading, and the quick-reference cheatsheet</div>
         </div>
         <div style="color: var(--c-primary); font-size: 18px;">&#8594;</div>
     </a>
 
+    {% if not study_plan_available %}
+    <div class="card" style="padding: 20px; margin-bottom: 24px;">
+        <div style="font-size: 15px; font-weight: 600; margin-bottom: 6px;" data-i18n="study_plan.coming_soon_title">Study plan coming soon</div>
+        <div style="font-size: 13px; color: var(--c-text-muted);" data-i18n="study_plan.coming_soon_hint">The certification shell is ready, but the guided plan and progress checklist are only bundled for certifications with published day-by-day material.</div>
+    </div>
+    {% else %}
     <!-- Progress overview -->
     <div class="card" style="padding: 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
         <div style="flex: 1; min-width: 200px;">
@@ -38,10 +44,13 @@
 
     <!-- Day cards -->
     <div id="study-days" style="display: flex; flex-direction: column; gap: 16px;"></div>
+    {% endif %}
 
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="/static/js/study_plan.js?v=23"></script>
+{% if study_plan_available %}
+<script src="/static/js/study_plan.js?v=24"></script>
+{% endif %}
 {% endblock %}

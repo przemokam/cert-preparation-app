@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set active_page = "mock_exam" %}
 
-{% block title %}Exam Results — AZ-500{% endblock %}
+{% block title %}Results{% if shell and shell.resolved_cert %} — {{ shell.resolved_cert.exam_code }}{% endif %}{% endblock %}
 
 {% block content %}
 <div style="max-width: 760px; margin: 0 auto;">
@@ -69,8 +69,8 @@
     <!-- Actions -->
     <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
         <button class="btn btn-primary btn-lg" onclick="startReviewSession()">Review Incorrect</button>
-        <a href="/learning" class="btn btn-secondary btn-lg">Practice More</a>
-        <a href="/" class="btn btn-outline btn-lg">Dashboard</a>
+        <a href="{{ shell.nav.learn if shell else '/learn' }}" class="btn btn-secondary btn-lg">Practice More</a>
+        <a href="{{ shell.nav.dashboard if shell else '/dashboard' }}" class="btn btn-outline btn-lg">Dashboard</a>
     </div>
 </div>
 {% endblock %}

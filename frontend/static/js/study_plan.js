@@ -263,12 +263,23 @@ const STUDY_PLAN = [
     }
 ];
 
+function buildScopedMaterialsDayHref(dayNumber) {
+    const params = new URLSearchParams(window.location.search);
+    const certSlug = params.get('cert');
+    return certSlug ? `/materials/day/${dayNumber}?cert=${encodeURIComponent(certSlug)}` : `/materials/day/${dayNumber}`;
+}
+
 let userProgress = {};
 let expandedDays = new Set();
+const studyPlanCertificationCode = getActiveCertificationCode();
 
 document.addEventListener('DOMContentLoaded', async () => {
+    if (!document.getElementById('study-days')) return;
     try {
-        const data = await api('/analytics/study-plan/progress');
+        const progressUrl = studyPlanCertificationCode
+            ? '/analytics/study-plan/progress?certification_code=' + encodeURIComponent(studyPlanCertificationCode)
+            : '/analytics/study-plan/progress';
+        const data = await api(progressUrl);
         userProgress = data.progress || {};
     } catch (e) {
         // Not logged in or no progress yet
@@ -365,7 +376,7 @@ function renderPlan() {
 
         // "Read Study Material" button at the TOP
         const materialLink = document.createElement('a');
-        materialLink.href = '/study-plan/day/' + day.day;
+        materialLink.href = buildScopedMaterialsDayHref(day.day);
         materialLink.className = 'study-material-btn';
         materialLink.textContent = '\ud83d\udcd6 Read Day ' + day.day + ' Study Material';
         const materialRow = document.createElement('div');
@@ -466,7 +477,7 @@ async function toggleSection(day, section, checkbox) {
     try {
         const result = await api('/analytics/study-plan/toggle', {
             method: 'POST',
-            body: { day, section },
+            body: { day, section, certification_code: studyPlanCertificationCode },
         });
         const key = day + '_' + section;
         userProgress[key] = { completed: result.completed };

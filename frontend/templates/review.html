@@ -1,20 +1,28 @@
 {% extends "base.html" %}
 {% set active_page = "review" %}
 
-{% block title %}Review Pool — AZ-500{% endblock %}
+{% block title %}Review — {% if page_scope == 'active' and shell and shell.resolved_cert %}{{ shell.resolved_cert.exam_code }}{% else %}All Certifications{% endif %}{% endblock %}
 
 {% block content %}
-<div style="max-width: 840px; margin: 0 auto;">
+<div id="review-page" data-scope="{{ page_scope }}" data-practice-enabled="{{ 'true' if review_session_enabled else 'false' }}" style="max-width: 840px; margin: 0 auto;">
 
     <!-- Header -->
     <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
         <div>
             <h1 class="page-title" data-i18n="review.title">Review Pool</h1>
-            <p class="page-subtitle" data-i18n="review.subtitle">Bookmarked and incorrectly answered questions</p>
+            <p class="page-subtitle" id="review-subtitle">Bookmarked and incorrectly answered questions</p>
+            <p class="page-subtitle" id="review-scope-note" style="font-size: 12px; margin-top: 6px;"></p>
         </div>
-        <button class="btn btn-primary" onclick="startReviewSession()" id="btn-start-review" data-i18n="review.start_session">
-            Practice Review Pool
-        </button>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 10px;">
+            <div style="display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                <a href="{{ scope_active_href }}" class="btn {{ 'btn-primary' if page_scope == 'active' else 'btn-outline' }}" data-i18n="review.scope_active">This Certification</a>
+                <a href="{{ scope_all_href }}" class="btn {{ 'btn-primary' if page_scope == 'all' else 'btn-outline' }}" data-i18n="review.scope_all">All Certifications</a>
+            </div>
+            <button class="btn btn-primary" onclick="startReviewSession()" id="btn-start-review" {% if not review_session_enabled %}disabled{% endif %} data-i18n="review.start_session">
+                Practice Review Pool
+            </button>
+            <p id="review-action-note" style="margin: 0; font-size: 12px; color: var(--c-text-muted); text-align: right;"></p>
+        </div>
     </div>
 
     <!-- Stats Bar -->
@@ -41,5 +49,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="/static/js/review.js?v=23"></script>
+<script src="/static/js/review.js?v=25"></script>
 {% endblock %}
