@@ -59,7 +59,6 @@ function applyReviewScopeCopy() {
         }
     }
 }
-
 document.addEventListener('DOMContentLoaded', () => {
     if (Object.keys(I18N.translations || {}).length > 0) {
         initReviewPage();

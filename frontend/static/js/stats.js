@@ -5,7 +5,6 @@
 
 let statsPageData = null;
 let statsPagePromise = null;
-
 function getStatsPage() {
     return document.getElementById('stats-page');
 }
