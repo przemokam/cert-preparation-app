@@ -28,7 +28,7 @@
     },
     "dashboard": {
         "welcome": "Willkommen zurück",
-        "subtitle": "Weiter mit der AZ-500-Vorbereitung",
+        "subtitle": "Weiter mit der Prüfungsvorbereitung",
         "questions_completed": "Beantwortete Fragen",
         "accuracy": "Gesamtgenauigkeit",
         "mock_exams_taken": "Probeprüfungen absolviert",
@@ -209,7 +209,7 @@
         "source_learning": "Lernen"
     },
     "learning": {
-        "title": "AZ-500 Lernen",
+        "title": "Fragenbank",
         "loading": "Laden...",
         "filter_domain": "Nach Domäne filtern",
         "all_domains": "Alle",
@@ -294,8 +294,8 @@
     },
     "study_plan": {
         "title": "7-Tage-Lernplan",
-        "subtitle": "Strukturierte Vorbereitung auf AZ-500: Azure Security Technologies",
-        "cheatsheet_title": "AZ-500 Spickzettel & Glossar",
+        "subtitle": "Strukturierter Prüfungsvorbereitungsplan",
+        "cheatsheet_title": "Spickzettel & Glossar",
         "cheatsheet_desc": "Prüfungsfallen, Lab-Tracker, Modul-Tracker, Kurzreferenz-Links",
         "cheatsheet_subtitle": "Kurzreferenztabellen, Prüfungsfallen, Lab-Tracker & offizielle Links",
         "overall_progress": "Gesamtfortschritt",

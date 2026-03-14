@@ -17,7 +17,7 @@ from backend.config import get_settings
 from backend.database import init_db, get_db
 from backend.auth import get_login_url, handle_callback, create_session_token, get_current_user, validate_oauth_state
 from backend.models import User, ExamSession
-from backend.routers import exam, analytics, questions
+from backend.routers import exam, analytics, questions, flashcards
 
 settings = get_settings()
 
@@ -93,6 +93,7 @@ templates = Jinja2Templates(directory="frontend/templates")
 app.include_router(exam.router, prefix="/api/exam", tags=["Exam"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(questions.router, prefix="/api/questions", tags=["Questions"])
+app.include_router(flashcards.router, prefix="/api/flashcards", tags=["Flashcards"])
 
 
 # ── Startup ───────────────────────────────────────────────────────
@@ -271,6 +272,16 @@ CERTIFICATION_CATALOG = [
         "description": "Placeholder card to validate the multi-cert shell structure.",
     },
     {
+        "certification_slug": "ceh",
+        "exam_code": "CEH",
+        "vendor_slug": "ec-council",
+        "vendor_name": "EC-Council",
+        "title": "Certified Ethical Hacker",
+        "level": "Professional",
+        "is_published": True,
+        "description": "573 verified questions across 9 CEH domains, mock exams (125 questions, 4 hours), study plan, and materials.",
+    },
+    {
         "certification_slug": "security-plus",
         "exam_code": "Security+",
         "vendor_slug": "comptia",
@@ -283,13 +294,24 @@ CERTIFICATION_CATALOG = [
 ]
 CERTIFICATIONS_BY_SLUG = {cert["certification_slug"]: cert for cert in CERTIFICATION_CATALOG}
 MATERIAL_DAY_TITLES = {
-    1: "Identity & Access (Part 1): RBAC, PIM, MFA",
-    2: "Identity & Access (Part 2): App Registrations, Managed Identities",
-    3: "Networking Security (Part 1): NSGs, ASGs, Firewall, UDRs",
-    4: "Networking Security (Part 2): Private Endpoints, WAF, DDoS",
-    5: "Compute, Database & Key Vault Security",
-    6: "Defender for Cloud, Azure Policy, Monitoring & Sentinel",
-    7: "Full Review, Weak Areas & Exam Simulation",
+    "az-500": {
+        1: "Identity & Access (Part 1): RBAC, PIM, MFA",
+        2: "Identity & Access (Part 2): App Registrations, Managed Identities",
+        3: "Networking Security (Part 1): NSGs, ASGs, Firewall, UDRs",
+        4: "Networking Security (Part 2): Private Endpoints, WAF, DDoS",
+        5: "Compute, Database & Key Vault Security",
+        6: "Defender for Cloud, Azure Policy, Monitoring & Sentinel",
+        7: "Full Review, Weak Areas & Exam Simulation",
+    },
+    "ceh": {
+        1: "Info Security Overview & Reconnaissance Techniques",
+        2: "System Hacking, Vulnerability Analysis & Malware",
+        3: "Sniffing, Social Engineering & Denial-of-Service",
+        4: "Session Hijacking & IDS/Firewall/Honeypot Evasion",
+        5: "Web Application Hacking & SQL Injection",
+        6: "Wireless, Mobile, IoT & OT Hacking",
+        7: "Cloud Computing, Cryptography & Final Review",
+    },
 }
 
 
@@ -301,18 +323,23 @@ def _get_materials_root_dir() -> str:
 
 
 def _get_material_day_path(certification_slug: Optional[str], day_number: int) -> Optional[str]:
-    if certification_slug != "az-500":
-        return None
     materials_dir = _get_materials_root_dir()
-    if day_number == 7:
-        return os.path.join(materials_dir, "AZ-500_7-Day_Study_Plan_4.md")
-    return os.path.join(materials_dir, f"AZ-500_Day{day_number}_Study_Material_Solution.md")
+    if certification_slug == "az-500":
+        if day_number == 7:
+            return os.path.join(materials_dir, "AZ-500_7-Day_Study_Plan_4.md")
+        return os.path.join(materials_dir, f"AZ-500_Day{day_number}_Study_Material_Solution.md")
+    elif certification_slug == "ceh":
+        return os.path.join(materials_dir, "CEH", f"CEH_Day{day_number}_Study_Material.md")
+    return None
 
 
 def _get_cheatsheet_source_path(certification_slug: Optional[str]) -> Optional[str]:
-    if certification_slug != "az-500":
-        return None
-    return os.path.join(_get_materials_root_dir(), "AZ-500_7-Day_Study_Plan_4.md")
+    materials_dir = _get_materials_root_dir()
+    if certification_slug == "az-500":
+        return os.path.join(materials_dir, "AZ-500_7-Day_Study_Plan_4.md")
+    elif certification_slug == "ceh":
+        return os.path.join(materials_dir, "CEH", "CEH_Cheatsheet.md")
+    return None
 
 
 def _build_url(path: str, **params) -> str:
@@ -418,7 +445,7 @@ def _rewrite_next_for_cert(next_value: Optional[str], certification_slug: str) -
         return _build_url("/dashboard", cert=certification_slug)
     if path == "/learning":
         return _build_url("/learn", cert=certification_slug)
-    if path in {"/dashboard", "/learn", "/mock-exams", "/study-plan", "/materials"}:
+    if path in {"/dashboard", "/learn", "/mock-exams", "/flashcards", "/study-plan", "/materials"}:
         return _build_url(path, cert=certification_slug)
     if path.startswith("/study-plan/day/"):
         path = path.replace("/study-plan/day/", "/materials/day/", 1)
@@ -523,6 +550,7 @@ def _build_shell(request: Request, current_page: str, *, resolved_cert=None, per
             "dashboard": _cert_scoped_nav_href("/dashboard", nav_cert),
             "learn": _cert_scoped_nav_href("/learn", nav_cert),
             "mock_exams": _cert_scoped_nav_href("/mock-exams", nav_cert),
+            "flashcards": _cert_scoped_nav_href("/flashcards", nav_cert),
             "study_plan": _cert_scoped_nav_href("/study-plan", nav_cert),
             "materials": _cert_scoped_nav_href("/materials", nav_cert),
             "review": _shared_scope_nav_href("/review", nav_cert),
@@ -833,6 +861,23 @@ async def mock_exams_page(request: Request, current_user: dict = Depends(get_cur
     )
 
 
+@app.get("/flashcards", response_class=HTMLResponse)
+async def flashcards_page(request: Request, current_user: dict = Depends(get_current_user)):
+    resolved_cert, source, redirect = _resolve_cert_scoped_route(request, "/flashcards")
+    if redirect:
+        return redirect
+    return _render_page(
+        "flashcards.html",
+        request,
+        current_user,
+        current_page="flashcards",
+        resolved_cert=resolved_cert,
+        persisted_active_cert=_get_persisted_active_cert(request),
+        breadcrumbs=[{"label": "Certification Hub", "href": "/certifications"}, {"label": "Flashcards"}],
+        persist_cert_slug=resolved_cert["certification_slug"] if source == "query" else None,
+    )
+
+
 @app.get("/materials", response_class=HTMLResponse)
 async def materials_page(request: Request, current_user: dict = Depends(get_current_user)):
     resolved_cert, source, redirect = _resolve_cert_scoped_route(request, "/materials")
@@ -846,7 +891,7 @@ async def materials_page(request: Request, current_user: dict = Depends(get_curr
             "title": title,
             "href": _build_url(f"/materials/day/{day_number}", cert=cert_slug),
         }
-        for day_number, title in MATERIAL_DAY_TITLES.items()
+        for day_number, title in MATERIAL_DAY_TITLES.get(cert_slug, {}).items()
     ] if materials_available else []
     return _render_page(
         "materials.html",
@@ -965,7 +1010,7 @@ async def study_day_page(request: Request, day_number: int, current_user: dict =
         ],
         persist_cert_slug=resolved_cert["certification_slug"] if source == "query" else None,
         day_number=day_number,
-        day_title=MATERIAL_DAY_TITLES.get(day_number, f"Day {day_number}"),
+        day_title=MATERIAL_DAY_TITLES.get(cert_slug, {}).get(day_number, f"Day {day_number}"),
         html_content=html_content,
         toc_html=toc_html,
         back_href=_build_url("/materials", cert=cert_slug),
@@ -996,41 +1041,42 @@ async def cheatsheet_page(request: Request, current_user: dict = Depends(get_cur
         with open(md_path, 'r', encoding='utf-8') as f:
             full_text = f.read()
 
-        # Extract reference sections: Lab Tracker, Module Tracker, Daily Schedule, Quick Reference
-        sections_to_extract = [
-            "## Lab Completion Tracker",
-            "## MS Learn Module Completion Tracker",
-            "## Daily Schedule Template",
-            "## Quick Reference: All Official Links",
-        ]
-        # Also extract the exam traps table from Day 7
-        exam_traps_text = ""
-        traps_start = full_text.find("**High-Frequency Exam Traps:**")
-        if traps_start > 0:
-            traps_end = full_text.find("\n---", traps_start)
-            if traps_end > 0:
-                exam_traps_text = "## High-Frequency Exam Traps\n\n" + full_text[traps_start + len("**High-Frequency Exam Traps:**"):traps_end].strip()
+        if cert_slug == "az-500":
+            # AZ-500: Extract specific reference sections from the study plan file
+            sections_to_extract = [
+                "## Lab Completion Tracker",
+                "## MS Learn Module Completion Tracker",
+                "## Daily Schedule Template",
+                "## Quick Reference: All Official Links",
+            ]
+            exam_traps_text = ""
+            traps_start = full_text.find("**High-Frequency Exam Traps:**")
+            if traps_start > 0:
+                traps_end = full_text.find("\n---", traps_start)
+                if traps_end > 0:
+                    exam_traps_text = "## High-Frequency Exam Traps\n\n" + full_text[traps_start + len("**High-Frequency Exam Traps:**"):traps_end].strip()
 
-        extracted_parts = []
-        if exam_traps_text:
-            extracted_parts.append(exam_traps_text)
+            extracted_parts = []
+            if exam_traps_text:
+                extracted_parts.append(exam_traps_text)
 
-        for section_heading in sections_to_extract:
-            start = full_text.find(section_heading)
-            if start == -1:
-                continue
-            # Find the end: next ## or end of file
-            next_section = full_text.find("\n## ", start + len(section_heading))
-            if next_section > 0:
-                section_text = full_text[start:next_section].strip()
-            else:
-                section_text = full_text[start:].strip()
-            # Remove trailing --- separator
-            if section_text.endswith("---"):
-                section_text = section_text[:-3].strip()
-            extracted_parts.append(section_text)
+            for section_heading in sections_to_extract:
+                start = full_text.find(section_heading)
+                if start == -1:
+                    continue
+                next_section = full_text.find("\n## ", start + len(section_heading))
+                if next_section > 0:
+                    section_text = full_text[start:next_section].strip()
+                else:
+                    section_text = full_text[start:].strip()
+                if section_text.endswith("---"):
+                    section_text = section_text[:-3].strip()
+                extracted_parts.append(section_text)
 
-        md_text = "\n\n---\n\n".join(extracted_parts)
+            md_text = "\n\n---\n\n".join(extracted_parts)
+        else:
+            # Other certs (CEH, etc.): use the entire cheatsheet file as-is
+            md_text = full_text
 
         md_converter = md_lib.Markdown(
             extensions=['tables', 'fenced_code', 'sane_lists', 'toc'],

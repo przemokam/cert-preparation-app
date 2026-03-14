@@ -1,14 +1,20 @@
 # cert-preparation-app
 
-Student-ready AZ-500 exam practice app with a prebuilt local database.
+Multi-certification exam preparation app with prebuilt question databases, study materials, and spaced-repetition flashcards.
 
 ## What this package includes
 
-- 413 prepared AZ-500 practice questions (`Q1–Q413`)
-- bundled SQLite database (`az500_dev.db`) — **no markdown import required**
+- Multi-certification support via Certification Hub
+- Prebuilt question banks with verified answers and detailed explanations
+- Bundled SQLite database (`az500_dev.db`) — **no import required**
 - FastAPI backend + Jinja/vanilla JS frontend
-- bundled study-plan markdown sources for day pages and cheatsheet
-- certification hub, learning mode, mock exams, study plan, materials, review, analytics, bilingual UI, and theme toggle
+- Learning mode with immediate feedback and spaced repetition (Leitner boxes)
+- Mock exams with certification-specific timing and question counts
+- 7-day study plans with progress tracking
+- Study materials and cheatsheets
+- Flashcards (exam traps, key facts, tools) with spaced repetition
+- Review pool, weak spots analysis, and statistics
+- Bilingual UI (EN / DE) and theme toggle (light / dark)
 
 ## Quick start
 
@@ -27,7 +33,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-The example file already contains safe local defaults for running the app on your machine.On first start, the app creates a private working database `az500_local.db` from the bundled `az500_dev.db` seed, so your local progress is not written into tracked git files.
+The example file already contains safe local defaults for running the app on your machine. On first start, the app creates a private working database `az500_local.db` from the bundled `az500_dev.db` seed, so your local progress is not written into tracked git files.
 
 ### 3. Start the app
 
@@ -60,7 +66,7 @@ Notes:
 
 - `git pull origin main` updates the tracked app files to the newest published version.
 - If `requirements.txt` changed, re-running `pip install -r requirements.txt` updates your local environment.
-- Your study progress now lives in the ignored local file `az500_local.db`, so normal updates should not be blocked by database changes.
+- Your study progress lives in the ignored local file `az500_local.db`, so normal updates should not be blocked by database changes.
 - If you want to rebuild your local working database from the latest bundled seed, delete `az500_local.db` and restart the app.
 
 ### One-time migration for older installs
@@ -72,37 +78,26 @@ git checkout -- az500_dev.db
 git pull origin main
 ```
 
-Then restart the app from the `cert-preparation-app` directory. After the first restart, refresh the local dev session once by opening:
+Then restart the app and refresh the local dev session:
 
-```bash
+```
 http://localhost:8000/logout
 http://localhost:8000/dev-login
 ```
 
-This recreates the local development user in the working database if your old session cookie still points at a user record from the pre-migration database state.
-
 Use `git checkout -- az500_dev.db` only for this one-time migration of older installs. For normal local progress resets, delete `az500_local.db` instead.
 
-## Important note
+## Included app areas
 
-This package is meant for **running** the prepared app locally.
-
-- The ready-to-use database is already included.
-- Internal authoring/import/verification files were intentionally removed from this package.
-
-## Included contents
-
-```text
-cert-preparation-app/
-├── README.md
-├── .env.example
-├── .gitignore
-├── requirements.txt
-├── az500_dev.db
-├── Claude_skany_materiały/
-├── backend/
-└── frontend/
-```
+- Certification Hub — select and switch between certifications
+- Dashboard — readiness snapshot per certification
+- Learning mode — question bank with domain filters and immediate feedback
+- Mock exams — timed exam simulation with certification-specific settings
+- Flashcards — spaced-repetition study cards (exam traps, key facts, tools)
+- Study Plan — 7-day structured plan with progress checklist
+- Materials — day-by-day study content and cheatsheet
+- Review — bookmark pool and error review
+- Statistics — accuracy, domain performance, and weak spots
 
 ## Runtime notes
 
@@ -110,20 +105,7 @@ cert-preparation-app/
 - Local working database: `az500_local.db` (git-ignored, auto-created on first start).
 - Local mode uses SQLite and a dev-login flow.
 - Production SSO / cloud deployment configuration is not part of this student package.
-- Source study-material markdown files for `study-plan/day/*` and `/study-plan/cheatsheet` are bundled in `Claude_skany_materiały/Materiały do nauki - notion/`.
-
-## Included app areas
-
-- Dashboard
-- Certification Hub
-- Learning mode
-- Mock exams
-- Study plan
-- Materials
-- Review
-- Statistics
-- Review and Statistics can switch between the active certification and an all-certifications view when appropriate.
-- Frontend translations (`EN` / `DE`)
+- Study materials are bundled in `Claude_skany_materiały/Materiały do nauki - notion/`.
 
 ## Troubleshooting
 
@@ -144,5 +126,3 @@ If the page opens but clicking `Study` or starting a session fails after a local
 - Open `http://localhost:8000/logout`
 - Then open `http://localhost:8000/dev-login`
 - Refresh the page and try again
-
-This recreates the local development user in `az500_local.db` and fixes the usual `POST /api/exam/start` → `404` case after migrating an older install.

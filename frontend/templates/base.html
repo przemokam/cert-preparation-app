@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}AZ-500 Exam Simulator{% endblock %} — Cybersteps</title>
+    <title>{% block title %}Exam Simulator{% endblock %} — Cybersteps</title>
     <meta name="description"
-        content="{% block description %}Microsoft AZ-500 Azure Security Technologies exam preparation{% endblock %}">
+        content="{% block description %}Certification exam preparation platform{% endblock %}">
     <script>
         (function() {
             try {
@@ -80,6 +80,12 @@
                             clip-rule="evenodd" />
                     </svg>
                     <span data-i18n="nav.mock_exams">Mock exams</span>
+                </a>
+                <a href="{{ shell.nav.flashcards if shell else '/flashcards' }}" class="nav-item {% if shell and shell.current_page == 'flashcards' %}active{% endif %}" id="nav-flashcards">
+                    <svg viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                    </svg>
+                    <span>Flashcards</span>
                 </a>
                 <a href="{{ shell.nav.study_plan if shell else '/study-plan' }}" class="nav-item {% if shell and shell.current_page == 'study_plan' %}active{% endif %}" id="nav-study-plan">
                     <svg viewBox="0 0 20 20" fill="currentColor">
@@ -175,8 +181,8 @@
         </main>
     </div>
 
-    <script src="/static/js/i18n.js?v=27"></script>
-    <script src="/static/js/app.js?v=27"></script>
+    <script src="/static/js/i18n.js?v=28"></script>
+    <script src="/static/js/app.js?v=28"></script>
     {% block extra_js %}{% endblock %}
 </body>
 

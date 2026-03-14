@@ -110,7 +110,7 @@
         </div>
         <div>
             <div data-i18n="dashboard.start_mock">Mock Exam</div>
-            <div class="qa-desc" data-i18n="dashboard.mock_exam_desc">60 questions, 150 min, real conditions</div>
+            <div class="qa-desc" id="qa-mock-desc">60 questions, 150 min, real conditions</div>
         </div>
     </button>
     <button class="quick-action" onclick="startLearning('weak_spots')" id="qa-weak">
@@ -409,4 +409,11 @@
 
 {% block extra_js %}
 <script src="/static/js/dashboard.js?v=23"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const cfg = getMockExamConfig();
+    const el = document.getElementById('qa-mock-desc');
+    if (el) el.textContent = `${cfg.questions} questions, ${cfg.minutes} min, real conditions`;
+});
+</script>
 {% endblock %}

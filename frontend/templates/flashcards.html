@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% set active_page = "flashcards" %}
+
+{% block title %}Flashcards{% if shell and shell.resolved_cert %} — {{ shell.resolved_cert.exam_code }}{% endif %}{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 0 auto;">
+
+    <div class="page-header">
+        <h1 class="page-title">Flashcards</h1>
+        <p class="page-subtitle">{% if shell and shell.resolved_cert %}{{ shell.resolved_cert.exam_code }}{% endif %} · Quick-fire study cards with spaced repetition</p>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="card" style="padding: 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 150px;">
+            <div style="font-size: 12px; color: var(--c-text-muted); margin-bottom: 4px;">Progress</div>
+            <div class="progress-bar" style="height: 8px;">
+                <div class="progress-fill" id="fc-progress-fill" style="width: 0%; background: var(--c-primary); transition: width 0.8s;"></div>
+            </div>
+        </div>
+        <div style="text-align: center; min-width: 60px;">
+            <div style="font-size: 22px; font-weight: 700; color: var(--c-primary);" id="fc-due-count">—</div>
+            <div style="font-size: 11px; color: var(--c-text-muted);">Due</div>
+        </div>
+        <div style="text-align: center; min-width: 60px;">
+            <div style="font-size: 22px; font-weight: 700; color: var(--c-success);" id="fc-mastered-count">—</div>
+            <div style="font-size: 11px; color: var(--c-text-muted);">Mastered</div>
+        </div>
+        <div style="text-align: center; min-width: 60px;">
+            <div style="font-size: 22px; font-weight: 700;" id="fc-total-count">—</div>
+            <div style="font-size: 11px; color: var(--c-text-muted);">Total</div>
+        </div>
+    </div>
+
+    <!-- Category filters -->
+    <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;" id="fc-categories"></div>
+
+    <!-- Start buttons -->
+    <div id="fc-start-area" style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+        <button class="btn btn-primary btn-lg" onclick="startFlashcardSession('all')" id="fc-start-btn">
+            Start Flashcard Session
+        </button>
+        <button class="btn btn-outline btn-lg" onclick="startFlashcardSession('due')">
+            Review Due Cards
+        </button>
+    </div>
+
+    <!-- Flashcard area (hidden until session started) -->
+    <div id="fc-session" style="display: none;">
+        <div style="text-align: center; margin-bottom: 12px;">
+            <span style="font-size: 13px; color: var(--c-text-muted);" id="fc-counter">Card 1 of 20</span>
+        </div>
+
+        <!-- The card -->
+        <div id="fc-card" class="card" style="min-height: 250px; padding: 32px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; transition: transform 0.3s, box-shadow 0.3s; user-select: none;" onclick="flipCard()">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--c-text-muted); margin-bottom: 12px;" id="fc-card-label">QUESTION</div>
+            <div style="font-size: 18px; line-height: 1.6; color: var(--c-text); max-width: 600px;" id="fc-card-text">Loading...</div>
+            <div style="margin-top: 16px; font-size: 12px; color: var(--c-primary);" id="fc-flip-hint">Click to reveal answer</div>
+        </div>
+
+        <!-- Rating buttons (hidden until flipped) -->
+        <div id="fc-rating" style="display: none; margin-top: 20px; text-align: center;">
+            <div style="font-size: 13px; color: var(--c-text-muted); margin-bottom: 12px;">How well did you know this?</div>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn" style="background: var(--c-danger-muted); color: var(--c-danger); border: 1px solid var(--c-danger); min-width: 120px;" onclick="rateCard(1)">
+                    Hard<br><span style="font-size: 11px; opacity: 0.7;">Review sooner</span>
+                </button>
+                <button class="btn" style="background: var(--c-primary-muted); color: var(--c-primary); border: 1px solid var(--c-primary); min-width: 120px;" onclick="rateCard(2)">
+                    Good<br><span style="font-size: 11px; opacity: 0.7;">Normal schedule</span>
+                </button>
+                <button class="btn" style="background: var(--c-success-muted); color: var(--c-success); border: 1px solid var(--c-success); min-width: 120px;" onclick="rateCard(3)">
+                    Easy<br><span style="font-size: 11px; opacity: 0.7;">Review later</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card meta (below card) -->
+    <div id="fc-card-meta" style="display: none; text-align: center; margin-top: 12px; display: flex; justify-content: center; gap: 12px; align-items: center;">
+        <span class="badge" id="fc-card-category" style="font-size: 11px; padding: 4px 12px; border-radius: 12px;"></span>
+        <span style="font-size: 12px; color: var(--c-text-muted); font-family: 'JetBrains Mono', monospace;" id="fc-card-box"></span>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/flashcards.js?v=3"></script>
+{% endblock %}

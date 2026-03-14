@@ -12,7 +12,7 @@
     <div class="card" style="padding: 28px; display: flex; flex-direction: column; gap: 18px;">
         <div>
             <div class="badge">Timed practice</div>
-            <h2 style="margin: 14px 0 8px;">60 questions · 150 minutes</h2>
+            <h2 style="margin: 14px 0 8px;" id="mock-exam-params">Loading...</h2>
             <p style="margin: 0; color: var(--c-text-secondary);">Start a certification-scoped mock exam under exam-like conditions. Results continue to the shared results/review flow.</p>
         </div>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
@@ -27,6 +27,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
     const certificationCode = getActiveCertificationCode();
+    // Update mock exam parameters display
+    const cfg = getMockExamConfig();
+    const paramsEl = document.getElementById('mock-exam-params');
+    if (paramsEl) paramsEl.textContent = `${cfg.questions} questions · ${cfg.minutes} minutes`;
+
     if (!certificationCode) return;
     const data = await api('/questions/count?certification_code=' + encodeURIComponent(certificationCode)).catch(() => null);
     if ((data?.total_active || 0) > 0) return;

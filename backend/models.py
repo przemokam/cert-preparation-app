@@ -283,6 +283,42 @@ class QuestionMastery(Base):
 LEITNER_INTERVALS = {1: 0, 2: 1, 3: 3, 4: 7, 5: 21}
 
 
+class Flashcard(Base):
+    """Flashcard for spaced-repetition study — front/back card with category."""
+    __tablename__ = "flashcards"
+
+    id = Column(Integer, primary_key=True)
+    certification_id = Column(Integer, ForeignKey("certifications.id"), nullable=False)
+    front = Column(Text, nullable=False)
+    back = Column(Text, nullable=False)
+    category = Column(String(30), nullable=False, default="key_fact")  # exam_trap, key_fact, tool
+    domain = Column(Integer, nullable=True)
+    source_question_number = Column(Integer, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    certification = relationship("Certification")
+
+
+class FlashcardMastery(Base):
+    """User progress on flashcards — reuses Leitner box model."""
+    __tablename__ = "flashcard_mastery"
+    __table_args__ = (
+        UniqueConstraint("user_id", "flashcard_id", name="uq_user_flashcard_mastery"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    flashcard_id = Column(Integer, ForeignKey("flashcards.id"), nullable=False)
+    box = Column(Integer, nullable=False, default=0)  # 0=unseen, 1-5 Leitner boxes
+    next_review_at = Column(DateTime, nullable=True)
+    times_seen = Column(Integer, nullable=False, default=0)
+    last_seen_at = Column(DateTime, nullable=True)
+    confidence = Column(Integer, nullable=True)  # 1=hard, 2=good, 3=easy
+
+    user = relationship("User")
+    flashcard = relationship("Flashcard")
+
+
 class StudyStreak(Base):
     """Daily study streak tracking per user."""
     __tablename__ = "study_streaks"

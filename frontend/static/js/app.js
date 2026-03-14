@@ -75,13 +75,24 @@ function getActiveCertificationSlug() {
 }
 
 
+// ── Mock exam parameters per certification ────
+const MOCK_EXAM_CONFIG = {
+    'AZ-500': { questions: 60,  minutes: 150 },
+    'CEH':    { questions: 125, minutes: 240 },
+};
+function getMockExamConfig() {
+    const code = getActiveCertificationCode();
+    return MOCK_EXAM_CONFIG[code] || { questions: 60, minutes: 150 };
+}
+
 // ── Navigation helpers ─────────────────────────
 async function startMockExam() {
-    if (!confirm(t('dashboard.mock_confirm') || 'Start a 150-minute Mock Exam with 60 questions?\nYou cannot pause once started.')) return;
+    const cfg = getMockExamConfig();
+    if (!confirm(`Start a ${cfg.minutes}-minute Mock Exam with ${cfg.questions} questions?\nYou cannot pause once started.`)) return;
     try {
         const data = await api('/exam/start', {
             method: 'POST',
-            body: { mode: 'mock_exam', num_questions: 60, certification_code: getActiveCertificationCode() },
+            body: { mode: 'mock_exam', num_questions: cfg.questions, certification_code: getActiveCertificationCode() },
         });
         if (data) window.location.href = `/mock-exams/session/${data.session_id}`;
     } catch (e) {

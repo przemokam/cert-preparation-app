@@ -28,7 +28,7 @@
     },
     "dashboard": {
         "welcome": "Welcome back",
-        "subtitle": "Let's continue your AZ-500 preparation",
+        "subtitle": "Let's continue your exam preparation",
         "questions_completed": "Questions Completed",
         "accuracy": "Overall Accuracy",
         "mock_exams_taken": "Mock Exams Taken",
@@ -209,7 +209,7 @@
         "source_learning": "Learning"
     },
     "learning": {
-        "title": "AZ-500 Learning",
+        "title": "Question Bank",
         "loading": "Loading...",
         "filter_domain": "Filter by Domain",
         "all_domains": "All",
@@ -294,8 +294,8 @@
     },
     "study_plan": {
         "title": "7-Day Study Plan",
-        "subtitle": "Structured preparation for AZ-500: Azure Security Technologies",
-        "cheatsheet_title": "AZ-500 Cheatsheet & Glossary",
+        "subtitle": "Structured exam preparation plan",
+        "cheatsheet_title": "Cheatsheet & Glossary",
         "cheatsheet_desc": "Exam traps, lab tracker, module tracker, quick reference links",
         "cheatsheet_subtitle": "Quick reference tables, exam traps, lab tracker & official links",
         "overall_progress": "Overall Progress",

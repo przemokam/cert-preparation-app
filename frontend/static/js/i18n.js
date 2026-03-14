@@ -7,7 +7,7 @@
 const I18N = {
     currentLang: localStorage.getItem('lang') || 'en',
     translations: {},
-    assetVersion: '27',
+    assetVersion: '28',
 
     async init() {
         await this.loadLanguage(this.currentLang);
