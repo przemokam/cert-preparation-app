@@ -1,5 +1,8 @@
 .env
 .venv/
+local.db
+local.db-shm
+local.db-wal
 az500_local.db
 az500_local.db-shm
 az500_local.db-wal

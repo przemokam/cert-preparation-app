@@ -318,7 +318,7 @@ MATERIAL_DAY_TITLES = {
 def _get_materials_root_dir() -> str:
     return os.path.normpath(os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "..",
-        "Claude_skany_materiały", "Materiały do nauki - notion"
+        "learning_materials"
     ))
 
 
@@ -326,8 +326,8 @@ def _get_material_day_path(certification_slug: Optional[str], day_number: int) -
     materials_dir = _get_materials_root_dir()
     if certification_slug == "az-500":
         if day_number == 7:
-            return os.path.join(materials_dir, "AZ-500_7-Day_Study_Plan_4.md")
-        return os.path.join(materials_dir, f"AZ-500_Day{day_number}_Study_Material_Solution.md")
+            return os.path.join(materials_dir, "AZ-500", "AZ-500_7-Day_Study_Plan_4.md")
+        return os.path.join(materials_dir, "AZ-500", f"AZ-500_Day{day_number}_Study_Material_Solution.md")
     elif certification_slug == "ceh":
         return os.path.join(materials_dir, "CEH", f"CEH_Day{day_number}_Study_Material.md")
     return None
@@ -336,7 +336,7 @@ def _get_material_day_path(certification_slug: Optional[str], day_number: int) -
 def _get_cheatsheet_source_path(certification_slug: Optional[str]) -> Optional[str]:
     materials_dir = _get_materials_root_dir()
     if certification_slug == "az-500":
-        return os.path.join(materials_dir, "AZ-500_7-Day_Study_Plan_4.md")
+        return os.path.join(materials_dir, "AZ-500", "AZ-500_7-Day_Study_Plan_4.md")
     elif certification_slug == "ceh":
         return os.path.join(materials_dir, "CEH", "CEH_Cheatsheet.md")
     return None

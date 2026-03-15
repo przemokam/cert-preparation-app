@@ -16,15 +16,18 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-BUNDLED_DATABASE_PATH = PROJECT_ROOT / "az500_dev.db"
-LOCAL_DATABASE_PATH = PROJECT_ROOT / "az500_local.db"
+BUNDLED_DATABASE_PATH = PROJECT_ROOT / "seed.db"
+LOCAL_DATABASE_PATH = PROJECT_ROOT / "local.db"
 BUNDLED_DATABASE_URL = f"sqlite:///{BUNDLED_DATABASE_PATH.as_posix()}"
 LOCAL_DATABASE_URL = f"sqlite:///{LOCAL_DATABASE_PATH.as_posix()}"
+# Accept legacy names from old .env files
 LEGACY_LOCAL_DATABASE_URLS = {
+    "sqlite:///./seed.db",
     "sqlite:///./az500_dev.db",
     BUNDLED_DATABASE_URL,
 }
 LOCAL_DATABASE_URL_ALIASES = {
+    "sqlite:///./local.db",
     "sqlite:///./az500_local.db",
     LOCAL_DATABASE_URL,
 }

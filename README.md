@@ -6,7 +6,7 @@ Multi-certification exam preparation app with prebuilt question databases, study
 
 - Multi-certification support via Certification Hub
 - Prebuilt question banks with verified answers and detailed explanations
-- Bundled SQLite database (`az500_dev.db`) — **no import required**
+- Bundled SQLite database (`seed.db`) — **no import required**
 - FastAPI backend + Jinja/vanilla JS frontend
 - Learning mode with immediate feedback and spaced repetition (Leitner boxes)
 - Mock exams with certification-specific timing and question counts
@@ -33,7 +33,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-The example file already contains safe local defaults for running the app on your machine. On first start, the app creates a private working database `az500_local.db` from the bundled `az500_dev.db` seed, so your local progress is not written into tracked git files.
+The example file already contains safe local defaults for running the app on your machine. On first start, the app creates a private working database `local.db` from the bundled `seed.db` seed, so your local progress is not written into tracked git files.
 
 ### 3. Start the app
 
@@ -66,15 +66,15 @@ Notes:
 
 - `git pull origin main` updates the tracked app files to the newest published version.
 - If `requirements.txt` changed, re-running `pip install -r requirements.txt` updates your local environment.
-- Your study progress lives in the ignored local file `az500_local.db`, so normal updates should not be blocked by database changes.
-- If you want to rebuild your local working database from the latest bundled seed, delete `az500_local.db` and restart the app.
+- Your study progress lives in the ignored local file `local.db`, so normal updates should not be blocked by database changes.
+- If you want to rebuild your local working database from the latest bundled seed, delete `local.db` and restart the app.
 
 ### One-time migration for older installs
 
-If your existing local copy was created before this change, your app may still have written progress into the tracked `az500_dev.db` file. In that case, stop the server and run this once before pulling:
+If your existing local copy was created before this change, your app may still have written progress into the tracked `seed.db` file. In that case, stop the server and run this once before pulling:
 
 ```bash
-git checkout -- az500_dev.db
+git checkout -- seed.db
 git pull origin main
 ```
 
@@ -85,7 +85,7 @@ http://localhost:8000/logout
 http://localhost:8000/dev-login
 ```
 
-Use `git checkout -- az500_dev.db` only for this one-time migration of older installs. For normal local progress resets, delete `az500_local.db` instead.
+Use `git checkout -- seed.db` only for this one-time migration of older installs. For normal local progress resets, delete `local.db` instead.
 
 ## Included app areas
 
@@ -101,11 +101,11 @@ Use `git checkout -- az500_dev.db` only for this one-time migration of older ins
 
 ## Runtime notes
 
-- Bundled seed database: `az500_dev.db`.
-- Local working database: `az500_local.db` (git-ignored, auto-created on first start).
+- Bundled seed database: `seed.db`.
+- Local working database: `local.db` (git-ignored, auto-created on first start).
 - Local mode uses SQLite and a dev-login flow.
 - Production SSO / cloud deployment configuration is not part of this student package.
-- Study materials are bundled in `Claude_skany_materiały/Materiały do nauki - notion/`.
+- Study materials are bundled in `learning_materials/`.
 
 ## Troubleshooting
 
@@ -117,7 +117,7 @@ Use `git checkout -- az500_dev.db` only for this one-time migration of older ins
 
 ### Database was modified during local study
 
-The app stores your local study progress in `az500_local.db`. If you want to reset your local progress, delete `az500_local.db` and restart the app.
+The app stores your local study progress in `local.db`. If you want to reset your local progress, delete `local.db` and restart the app.
 
 ### Learning / Study button returns 404 after an update
 
