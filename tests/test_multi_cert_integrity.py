@@ -190,11 +190,11 @@ class TestCertificationCatalog(unittest.TestCase):
         slugs = {c["certification_slug"] for c in CERTIFICATION_CATALOG}
         self.assertIn("az-500", slugs)
 
-    def test_ceh_is_published(self):
-        """CEH must be published (visible to users)."""
+    def test_ceh_is_unpublished(self):
+        """CEH must be unpublished (hidden from users in cert-preparation-app)."""
         from backend.main import CERTIFICATION_CATALOG
         ceh = next(c for c in CERTIFICATION_CATALOG if c["certification_slug"] == "ceh")
-        self.assertTrue(ceh["is_published"])
+        self.assertFalse(ceh["is_published"])
 
     def test_material_day_titles_per_cert(self):
         """MATERIAL_DAY_TITLES must have entries for both certifications."""

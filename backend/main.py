@@ -278,7 +278,8 @@ CERTIFICATION_CATALOG = [
         "vendor_name": "EC-Council",
         "title": "Certified Ethical Hacker",
         "level": "Professional",
-        "is_published": True,
+        "is_published": False,
+        "is_hidden": True,
         "description": "573 verified questions across 9 CEH domains, mock exams (125 questions, 4 hours), study plan, and materials.",
     },
     {
@@ -628,6 +629,8 @@ async def certifications_page(request: Request, current_user: Optional[dict] = D
     next_path = _sanitize_next_path(request.query_params.get("next")) or "/dashboard"
     cards = []
     for cert in CERTIFICATION_CATALOG:
+        if cert.get("is_hidden"):
+            continue
         cards.append({
             **cert,
             "is_active": bool(persisted_active_cert and cert["certification_slug"] == persisted_active_cert["certification_slug"]),
@@ -650,7 +653,7 @@ async def certifications_page(request: Request, current_user: Optional[dict] = D
 @app.get("/certifications/select/{certification_slug}")
 async def select_certification(certification_slug: str, request: Request):
     cert = _get_catalog_cert(certification_slug)
-    if not cert:
+    if not cert or cert.get("is_hidden"):
         return RedirectResponse(_build_url("/certifications", reason="invalid_cert"), status_code=302)
     response = RedirectResponse(
         _rewrite_next_for_cert(request.query_params.get("next"), cert["certification_slug"]),
